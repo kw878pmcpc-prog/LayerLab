@@ -5,24 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>LayerLab — Smarter fragrance layering, made simple.</title>
 <style>
-:root { --bg:#0b0e14; --fg:#e6e6e6; --muted:#aaa; --card:#141925; --accent:#8ac8ff; --border:#263042; }
+:root { --bg:#0b0e14; --fg:#e6e6e6; --muted:#aaa; --card:#141925; --accent:#8ac8ff; --accent2:#ffd08a; --border:#263042; }
 *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,sans-serif}
 .app-header{text-align:center;padding:2rem 1rem;border-bottom:1px solid var(--border)}
 .tagline{color:var(--muted)}
-.container{max-width:980px;margin:2rem auto;padding:0 1rem}
+.container{max-width:1000px;margin:2rem auto;padding:0 1rem}
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem}
 label{display:block;margin:.5rem 0;font-size:.95rem}
 input,textarea{width:100%;padding:.6rem .75rem;border-radius:10px;border:1px solid var(--border);background:#0f1420;color:var(--fg)}
 button{margin-top:.8rem;padding:.6rem 1.1rem;border:none;border-radius:10px;background:var(--accent);color:#000;font-weight:700;cursor:pointer}
-.row{display:flex;gap:.6rem;flex-wrap:wrap}
-.row > *{flex:1}
-#library,#results{margin-top:1rem}
+.row{display:flex;gap:.6rem;flex-wrap:wrap}.row>*{flex:1}
+#library,#results,#comboResults{margin-top:1rem}
 .fragrance{border:1px solid var(--border);border-radius:10px;padding:.6rem .75rem;margin:.4rem 0;background:#0f1420}
 .result{border:1px solid var(--border);border-radius:10px;padding:.8rem;margin-top:.6rem;background:#0f1420}
 small.muted{color:var(--muted)}
 .app-footer{text-align:center;padding:1rem;color:var(--muted);border-top:1px solid var(--border)}
 a.link{color:var(--accent);text-decoration:none}
 input[type=file]{background:#0f1420;padding:.6rem;border-radius:10px;border:1px solid var(--border);color:var(--fg)}
+.badge{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:.15rem .5rem;margin-right:.3rem;font-size:.8rem;color:var(--muted)}
+.score{font-weight:900;font-size:1.4rem;color:var(--accent2)}
+.breakdown{font-size:.95rem;color:var(--muted)}
+.comboPick{display:flex;align-items:center;gap:.5rem;margin:.25rem 0}
+.comboPick input{width:auto}
+.searchRow{display:flex;gap:.6rem;align-items:center}
+.tag{display:inline-block;background:#1a2233;border:1px solid var(--border);padding:.15rem .5rem;border-radius:999px;margin:.15rem .25rem 0 0;font-size:.75rem;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -45,7 +51,7 @@ input[type=file]{background:#0f1420;padding:.6rem;border-radius:10px;border:1px 
         <label>Base Notes <input id="fBase" placeholder="e.g., cedar, amber, musk" /></label>
       </div>
       <button id="addBtn">Add to Library</button>
-      <small class="muted">Tip: raw notes will be auto-mapped to families when recommending.</small>
+      <small class="muted">Tip: raw notes will be auto-mapped to families when recommending or scoring.</small>
     </section>
 
     <!-- Import / Export -->
@@ -57,7 +63,7 @@ input[type=file]{background:#0f1420;padding:.6rem;border-radius:10px;border:1px 
             <input id="csvInput" type="file" accept=".csv" />
           </label>
           <small class="muted">
-            Expected headers: <code>name,brand,top,heart,base</code> (strings; notes comma-separated).
+            Expected headers: <code>name,brand,top,heart,base</code> (strings; notes comma/semicolon-separated).
           </small>
         </div>
         <div>
@@ -65,28 +71,30 @@ input[type=file]{background:#0f1420;padding:.6rem;border-radius:10px;border:1px 
           <small class="muted">Downloads your current library.</small>
         </div>
       </div>
-      <details style="margin-top:.5rem">
-        <summary>CSV example (copy into a file)</summary>
-        <pre style="white-space:pre-wrap">
-name,brand,top,heart,base
-Amber Horizon,Aether Co,vanilla,amber,"woody; resinous"
-Citrus Veil,Solaire,"bergamot, green tea","orange blossom",musk
-Velvet Smoke,NoirWorks,black pepper,smoke,"amber; cedar"
-Ocean Muse,BlueNote,"sea notes; green","herbal; aromatic",musk
-Rose Ember,Lumine,rose,cardamom,"amber; tonka bean"
-        </pre>
-      </details>
     </section>
 
-    <!-- Library -->
+    <!-- Library + Search -->
     <section class="card">
       <h2>Your Library</h2>
+      <div class="searchRow">
+        <input id="searchInput" placeholder="Search by name, brand, or note (e.g., bergamot, amber, smoky)..." />
+        <button id="clearSearchBtn" style="background:#2a3346;color:#e6e6e6">Clear</button>
+      </div>
       <div id="library"></div>
+    </section>
+
+    <!-- Multi-fragrance combo rating -->
+    <section class="card">
+      <h2>Rate a Layering Combo (2–4 fragrances)</h2>
+      <p class="muted">Use the checkboxes below (filtered by your search). Pick 2 to 4 scents and click rate.</p>
+      <div id="comboPicker"></div>
+      <button id="rateComboBtn">✨ Rate Layering Combo</button>
+      <div id="comboResults"></div>
     </section>
 
     <!-- Recs -->
     <section class="card">
-      <h2>Recommendations</h2>
+      <h2>Quick Discovery</h2>
       <button id="randomBtn">🎲 Generate Random Combo</button>
       <div id="results"></div>
     </section>
@@ -96,7 +104,6 @@ Rose Ember,Lumine,rose,cardamom,"amber; tonka bean"
       <h2>Data & Legal</h2>
       <p class="muted">
         LayerLab does not scrape third-party sites. Import only data you have rights to use.
-        If a dataset on GitHub was scraped from a site with terms that forbid scraping, using it may be unlawful.
       </p>
     </section>
   </main>
@@ -106,7 +113,9 @@ Rose Ember,Lumine,rose,cardamom,"amber; tonka bean"
   </footer>
 
 <script>
-// ====== Sample data ======
+/* =======================
+   Sample data
+======================= */
 const sampleFragrances = [
   { name:"Amber Horizon", brand:"Aether Co", notes:{ top:["vanilla"], heart:["amber"], base:["woody","resinous"] } },
   { name:"Citrus Veil", brand:"Solaire", notes:{ top:["bergamot","green tea"], heart:["orange blossom"], base:["musk"] } },
@@ -115,148 +124,305 @@ const sampleFragrances = [
   { name:"Rose Ember", brand:"Lumine", notes:{ top:["rose"], heart:["cardamom"], base:["amber","tonka bean"] } },
 ];
 
-// ====== Note → family mapper (expand as needed) ======
+/* =======================
+   Note → family mapper
+======================= */
 const MAP = {
   // citrus
   "bergamot":"citrus","lemon":"citrus","lime":"citrus","grapefruit":"citrus","orange":"citrus","mandarin":"citrus","petitgrain":"citrus",
-  // green/fresh
-  "green tea":"green","violet leaf":"green","galbanum":"green","basil":"herbal","mint":"herbal","rosemary":"aromatic","sage":"herbal",
+  // green/fresh/herbal/aromatic
+  "green tea":"green","violet leaf":"green","galbanum":"green","basil":"herbal","mint":"herbal","rosemary":"aromatic","sage":"herbal","green":"green",
   // florals
-  "rose":"floral","jasmine":"white floral","tuberose":"white floral","orange blossom":"white floral","ylang-ylang":"floral","lily":"floral",
+  "rose":"floral","jasmine":"white_floral","tuberose":"white_floral","orange blossom":"white_floral","ylang-ylang":"floral","lily":"floral","white floral":"white_floral",
   // spicy
-  "cardamom":"spicy","black pepper":"spicy","pink pepper":"spicy","cinnamon":"spicy","clove":"spicy","nutmeg":"spicy",
+  "cardamom":"spicy","black pepper":"spicy","pink pepper":"spicy","cinnamon":"spicy","clove":"spicy","nutmeg":"spicy","pepper":"spicy","spicy":"spicy",
   // woods/resins/smoke
-  "cedar":"woody","sandalwood":"woody","vetiver":"woody","oud":"woody","incense":"smoky","smoke":"smoky","myrrh":"resinous","labdanum":"resinous","frankincense":"resinous",
+  "cedar":"woody","sandalwood":"woody","vetiver":"woody","oud":"woody","incense":"smoky","smoke":"smoky","myrrh":"resinous","labdanum":"resinous","frankincense":"resinous","resin":"resinous",
   // amber/musk/sweet/gourmand
-  "amber":"amber","ambroxan":"amber","musk":"musky","tonka bean":"sweet","vanilla":"sweet","caramel":"gourmand","chocolate":"gourmand",
+  "amber":"amber","ambroxan":"amber","musk":"musky","tonka bean":"sweet","vanilla":"sweet","caramel":"gourmand","chocolate":"gourmand","praline":"gourmand","honey":"sweet",
   // aquatic/aldehydic
   "sea notes":"aquatic","marine":"aquatic","aldehydes":"aldehydic"
 };
-function toFamilies(noteList){
-  return noteList.map(n=>n.toLowerCase().trim())
-                 .filter(Boolean)
-                 .map(n => MAP[n] || n); // fall back to raw note if unknown
-}
+const FAMILIES = ["citrus","green","white_floral","floral","spicy","resinous","smoky","woody","musky","amber","sweet","gourmand","aquatic","aldehydic","herbal","aromatic"];
 
-// ====== State ======
+/* Similarity matrix (rough heuristics) */
+const SIM = (() => {
+  const n = FAMILIES.length, M = Array.from({length:n},()=>Array(n).fill(0));
+  for (let i=0;i<n;i++) M[i][i]=1;
+  const s=(a,b,v)=>{ const i=FAMILIES.indexOf(a), j=FAMILIES.indexOf(b); M[i][j]=v; M[j][i]=v; };
+  s("woody","smoky",0.6); s("woody","resinous",0.5); s("amber","sweet",0.55); s("amber","gourmand",0.45);
+  s("white_floral","floral",0.7); s("citrus","green",0.6); s("herbal","aromatic",0.7); s("musky","amber",0.5);
+  s("smoky","sweet",0.35); s("smoky","gourmand",0.3); s("citrus","amber",0.25); s("green","sweet",0.2); s("citrus","woody",0.3);
+  // gentle clashes (negative)
+  s("aldehydic","gourmand",-0.3); s("aldehydic","smoky",-0.25); s("aquatic","smoky",-0.25); s("aquatic","gourmand",-0.2); s("green","gourmand",-0.15);
+  return M;
+})();
+
+/* =======================
+   State & Storage
+======================= */
 let library = JSON.parse(localStorage.getItem("layerlab_lib") || "[]");
 if (!library.length) library = sampleFragrances.slice();
 function save(){ localStorage.setItem("layerlab_lib", JSON.stringify(library)); }
 
-// ====== UI ======
-function escapeHtml(s=""){ return s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;" }[m])); }
+/* =======================
+   Utils
+======================= */
+const escapeHtml = (s="") => s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
+const lowerIncludes = (hay="", needle="") => hay.toLowerCase().includes(needle.toLowerCase());
+const splitNotes = s => (s||"").split(/[,;]+/).map(x=>x.trim()).filter(Boolean);
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const dot = (a,b)=>a.reduce((sum,v,i)=>sum+v*b[i],0);
+const norm = a=>Math.sqrt(dot(a,a));
+const cosine = (a,b)=>{const na=norm(a), nb=norm(b); return (na===0||nb===0)?0:dot(a,b)/(na*nb);};
+
+function toFamilies(noteList){ return noteList.map(n=>n.toLowerCase().trim()).filter(Boolean).map(n => MAP[n] || n); }
+function accordVector(fr){
+  // build weighted family vector from top/heart/base
+  const vec = Array(FAMILIES.length).fill(0);
+  const push = (arr, w)=> arr.forEach(n=>{
+    const fam = MAP[n.toLowerCase()] || n.toLowerCase();
+    const idx = FAMILIES.indexOf(fam);
+    if (idx>=0) vec[idx] += w;
+  });
+  push(fr.notes.top||[], 1.0);
+  push(fr.notes.heart||[], 1.5);
+  push(fr.notes.base||[], 2.0);
+  // normalize
+  const maxv = Math.max(1, ...vec);
+  return vec.map(v=>v/maxv);
+}
+
+/* =======================
+   Rendering (with search)
+======================= */
+let searchTerm = "";
+document.getElementById("searchInput").addEventListener("input", (e)=>{ searchTerm = e.target.value.trim(); renderLibrary(); renderComboPicker(); });
+document.getElementById("clearSearchBtn").addEventListener("click", ()=>{ searchTerm=""; document.getElementById("searchInput").value=""; renderLibrary(); renderComboPicker(); });
+
+function filterBySearch(list){
+  if (!searchTerm) return list;
+  const q = searchTerm.toLowerCase();
+  return list.filter(f => {
+    const inName = lowerIncludes(f.name, q);
+    const inBrand = lowerIncludes(f.brand, q);
+    const inNotes = [...(f.notes.top||[]), ...(f.notes.heart||[]), ...(f.notes.base||[])]
+      .some(n => n.toLowerCase().includes(q) || (MAP[n.toLowerCase()]||"").includes(q));
+    return inName || inBrand || inNotes;
+  });
+}
+
 function renderLibrary(){
   const div = document.getElementById("library");
   div.innerHTML = "";
-  library.forEach(f=>{
+  filterBySearch(library).forEach((f, i)=>{
     const el = document.createElement("div");
     el.className = "fragrance";
+    const famTop = toFamilies(f.notes.top||[]);
+    const famHeart= toFamilies(f.notes.heart||[]);
+    const famBase= toFamilies(f.notes.base||[]);
     el.innerHTML = `
       <strong>${escapeHtml(f.name)}</strong> <span style="opacity:.8">(${escapeHtml(f.brand)})</span><br/>
       <small>Top:</small> ${(f.notes.top||[]).join(", ") || "—"}<br/>
       <small>Heart:</small> ${(f.notes.heart||[]).join(", ") || "—"}<br/>
-      <small>Base:</small> ${(f.notes.base||[]).join(", ") || "—"}
+      <small>Base:</small> ${(f.notes.base||[]).join(", ") || "—"}<br/>
+      ${[...new Set([...famTop, ...famHeart, ...famBase].filter(x=>FAMILIES.includes(x)))].map(fm=>`<span class="tag">${fm}</span>`).join(" ")}
     `;
     div.appendChild(el);
   });
 }
 
-// ====== Add manually ======
+function renderComboPicker(){
+  const wrap = document.getElementById("comboPicker");
+  wrap.innerHTML = "";
+  filterBySearch(library).forEach((f, idx)=>{
+    const row = document.createElement("label");
+    row.className = "comboPick";
+    row.innerHTML = `
+      <input type="checkbox" data-idx="${idx}">
+      <span><strong>${escapeHtml(f.name)}</strong> <span style="opacity:.8">(${escapeHtml(f.brand)})</span></span>
+    `;
+    wrap.appendChild(row);
+  });
+}
+
+/* =======================
+   Actions
+======================= */
 document.getElementById("addBtn").onclick = ()=>{
   const f = {
     name: document.getElementById("fName").value.trim() || "Untitled",
     brand: document.getElementById("fBrand").value.trim(),
     notes:{
-      top:  document.getElementById("fTop").value.split(/[,;]+/).map(s=>s.trim()).filter(Boolean),
-      heart:document.getElementById("fHeart").value.split(/[,;]+/).map(s=>s.trim()).filter(Boolean),
-      base: document.getElementById("fBase").value.split(/[,;]+/).map(s=>s.trim()).filter(Boolean)
+      top:  splitNotes(document.getElementById("fTop").value),
+      heart:splitNotes(document.getElementById("fHeart").value),
+      base: splitNotes(document.getElementById("fBase").value)
     }
   };
-  library.push(f); save(); renderLibrary();
+  library.push(f); save(); renderLibrary(); renderComboPicker();
   ["fName","fBrand","fTop","fHeart","fBase"].forEach(id=>document.getElementById(id).value="");
 };
 
-// ====== CSV import (safe, user-provided) ======
+// CSV import
 document.getElementById("csvInput").addEventListener("change", async (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
+  const file = e.target.files[0]; if(!file) return;
   const text = await file.text();
   const rows = text.split(/\r?\n/).filter(r=>r.trim().length);
   if (!rows.length) return alert("CSV is empty");
   const headers = rows[0].split(",").map(h=>h.trim().toLowerCase());
-  const idx = (k)=>headers.indexOf(k);
+  const idx = k => headers.indexOf(k);
   const req = ["name","brand","top","heart","base"];
   if (req.some(k=>idx(k)===-1)) return alert("Missing headers. Need: name, brand, top, heart, base");
   for (let i=1;i<rows.length;i++){
-    const cols = splitCsvLine(rows[i], headers.length);
+    const cols = parseCsvLine(rows[i], headers.length);
     if (!cols) continue;
-    const name = (cols[idx("name")]||"").trim();
-    if (!name) continue;
+    const name = (cols[idx("name")]||"").trim(); if (!name) continue;
     const brand = (cols[idx("brand")]||"").trim();
     const top  = splitNotes(cols[idx("top")]);
     const heart= splitNotes(cols[idx("heart")]);
     const base = splitNotes(cols[idx("base")]);
     library.push({ name, brand, notes:{ top, heart, base }});
   }
-  save(); renderLibrary();
-  alert("Imported!");
+  save(); renderLibrary(); renderComboPicker(); alert("Imported!");
 });
-function splitCsvLine(line, expected){
-  // basic CSV splitter supporting quotes
+function parseCsvLine(line, expected){
   const out=[], re=/\s*(?:"([^"]*)"|([^,]*))\s*(?:,|$)/g; let m;
   while((m=re.exec(line))!==null){ out.push(m[1] ?? m[2]); }
-  if (expected && out.length<expected) {
-    // pad
-    while(out.length<expected) out.push("");
-  }
+  while(out.length<expected) out.push("");
   return out;
 }
-function splitNotes(s){ return (s||"").split(/[,;]+/).map(x=>x.trim()).filter(Boolean); }
 
-// ====== Random pairing (with mapping in explanation) ======
-function sharedNotes(a,b){
-  const allA = [...a.top,...a.heart,...a.base].map(x=>x.toLowerCase());
-  const allB = [...b.top,...b.heart,...b.base].map(x=>x.toLowerCase());
-  const famA = toFamilies(allA), famB = toFamilies(allB);
-  const shared = new Set(famA.filter(x=>famB.includes(x)));
-  return Array.from(shared);
-}
+// CSV export
+document.getElementById("exportBtn").onclick = ()=>{
+  const rows = [["name","brand","top","heart","base"]];
+  library.forEach(f=>rows.push([
+    f.name, f.brand, (f.notes.top||[]).join("; "), (f.notes.heart||[]).join("; "), (f.notes.base||[]).join("; ")
+  ]));
+  const csv = rows.map(r=>r.map(cell=>/[,"]/.test(cell)?('"'+cell.replace(/"/g,'""')+'"'):cell).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"}); const url = URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="layerlab_library.csv"; a.click(); URL.revokeObjectURL(url);
+};
+
+// Random combo
 document.getElementById("randomBtn").onclick = ()=>{
-  if (library.length < 2) return alert("Add at least 2 fragrances");
-  const i = Math.floor(Math.random()*library.length);
-  let j=i; while(j===i) j = Math.floor(Math.random()*library.length);
-  const A=library[i], B=library[j];
-  const shared = sharedNotes(A.notes, B.notes);
-  const resultDiv = document.getElementById("results");
-  resultDiv.innerHTML = `
+  if (library.length<2) return alert("Add at least 2 fragrances");
+  const i = Math.floor(Math.random()*library.length); let j=i; while(j===i) j=Math.floor(Math.random()*library.length);
+  const A=library[i], B=library[j]; const shared = sharedFamilies(A,B);
+  document.getElementById("results").innerHTML = `
+    <div class="result"><strong>${escapeHtml(A.name)}</strong> + <strong>${escapeHtml(B.name)}</strong><br/>
+    ${shared.length ? `Shared families: ${shared.join(", ")}` : "Contrasting but complementary!"}</div>`;
+};
+
+// Rate combo (2–4)
+document.getElementById("rateComboBtn").onclick = ()=>{
+  const checks = Array.from(document.querySelectorAll('#comboPicker input[type="checkbox"]:checked'));
+  if (checks.length < 2 || checks.length > 4) return alert("Please pick 2–4 fragrances.");
+  const selected = checks.map(c => library[Number(c.getAttribute("data-idx"))]);
+  const res = scoreCombo(selected);
+  document.getElementById("comboResults").innerHTML = `
     <div class="result">
-      <strong>${escapeHtml(A.name)}</strong> + <strong>${escapeHtml(B.name)}</strong><br/>
-      ${shared.length ? `Shared families (auto-mapped): ${shared.join(", ")}` : "Contrasting but complementary!"}
+      <div class="score">Score: ${Math.round(res.total*100)} / 100</div>
+      <div class="breakdown">
+        Glue (backbone): ${(res.glue*100).toFixed(0)} ·
+        Pleasant contrast: ${(res.contrast*100).toFixed(0)} ·
+        Temporal harmony: ${(res.temporal*100).toFixed(0)} ·
+        Clash penalty: -${(res.clash*100).toFixed(0)}
+      </div>
+      <div style="margin-top:.5rem">
+        ${selected.map(f=>`<span class="badge">${escapeHtml(f.name)}</span>`).join(" ")}
+      </div>
     </div>`;
 };
 
-// ====== Export CSV ======
-document.getElementById("exportBtn").onclick = ()=>{
-  const rows = [["name","brand","top","heart","base"]];
-  library.forEach(f=>{
-    rows.push([
-      f.name,
-      f.brand,
-      (f.notes.top||[]).join("; "),
-      (f.notes.heart||[]).join("; "),
-      (f.notes.base||[]).join("; ")
-    ]);
-  });
-  const csv = rows.map(r=>r.map(cell=>/[,"]/.test(cell)?('"'+cell.replace(/"/g,'""')+'"'):cell).join(",")).join("\n");
-  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = "layerlab_library.csv"; a.click();
-  URL.revokeObjectURL(url);
-};
+/* =======================
+   Scoring (multi 2–4)
+======================= */
+function sharedFamilies(A,B){
+  const fa = toFamilies([...(A.notes.top||[]),...(A.notes.heart||[]),...(A.notes.base||[])]);
+  const fb = toFamilies([...(B.notes.top||[]),...(B.notes.heart||[]),...(B.notes.base||[])]);
+  return Array.from(new Set(fa.filter(x=>fb.includes(x) && FAMILIES.includes(x))));
+}
 
-// Paint
+function scoreCombo(list){
+  // Build vectors
+  const vecs = list.map(accordVector);
+
+  // Pairwise similarities
+  let glue=0, contrast=0, pairs=0, clash=0, temporal=0;
+  for (let i=0;i<vecs.length;i++){
+    for (let j=i+1;j<vecs.length;j++){
+      const a = vecs[i], b = vecs[j];
+      const sim = cosine(a,b); // backbone
+      glue += sim;
+
+      // pleasant contrast only if some glue exists
+      const contr = (1 - sim) * (0.5 + 0.5*sim);
+      contrast += contr;
+
+      // clash: weighted by negative similarities across families
+      clash += pairClash(a,b);
+
+      // temporal approximation: reward overlap in base-weighted families,
+      // small penalty for both being top-heavy simultaneously
+      temporal += temporalHarmony(list[i], list[j]);
+      pairs++;
+    }
+  }
+  if (pairs>0){ glue/=pairs; contrast/=pairs; clash/=pairs; temporal/=pairs; }
+
+  // Combine into total 0..1
+  // Weights tuned gently; clash is a penalty
+  const w = {glue:.34, contrast:.18, temporal:.28, clash:.20};
+  let total = w.glue*glue + w.contrast*contrast + w.temporal*temporal - w.clash*clash;
+  total = clamp01(total);
+
+  return { total, glue, contrast, temporal, clash };
+}
+
+function pairClash(a,b){
+  // Clash is sum of negative-similarity interactions weighted by magnitudes
+  let c=0;
+  for (let i=0;i<FAMILIES.length;i++){
+    for (let j=0;j<FAMILIES.length;j++){
+      const s = SIM[i][j];
+      if (s < 0) c += (a[i]*b[j]) * (-s);
+    }
+  }
+  // normalize roughly
+  return clamp01(c/5);
+}
+
+function temporalHarmony(frA, frB){
+  // Use family presence + layer weights as crude time proxy.
+  const famA = familyLayerWeights(frA); // {top:vec, heart:vec, base:vec}
+  const famB = familyLayerWeights(frB);
+  // Reward base alignment, mild reward heart, small penalty for both loud in top
+  const baseOverlap = cosine(famA.base, famB.base);
+  const heartOverlap = cosine(famA.heart, famB.heart);
+  const topOverlap  = cosine(famA.top,  famB.top);
+  // Calculate as combination
+  let t = 0.6*baseOverlap + 0.35*heartOverlap - 0.25*topOverlap;
+  // scale to 0..1
+  t = (t + 0.25); // shift
+  return clamp01(t);
+}
+
+function familyLayerWeights(fr){
+  const mk = ()=>Array(FAMILIES.length).fill(0);
+  const top=mk(), heart=mk(), base=mk();
+  (fr.notes.top||[]).forEach(n=>{ const fam=MAP[n.toLowerCase()]||n.toLowerCase(); const i=FAMILIES.indexOf(fam); if(i>=0) top[i]+=1; });
+  (fr.notes.heart||[]).forEach(n=>{ const fam=MAP[n.toLowerCase()]||n.toLowerCase(); const i=FAMILIES.indexOf(fam); if(i>=0) heart[i]+=1.5; });
+  (fr.notes.base||[]).forEach(n=>{ const fam=MAP[n.toLowerCase()]||n.toLowerCase(); const i=FAMILIES.indexOf(fam); if(i>=0) base[i]+=2.0; });
+  // normalize each
+  const normz = v => { const m=Math.max(1,...v); return v.map(x=>x/m); };
+  return { top:normz(top), heart:normz(heart), base:normz(base) };
+}
+
+/* =======================
+   Initial paint
+======================= */
 renderLibrary();
+renderComboPicker();
 </script>
 </body>
 </html>
