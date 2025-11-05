@@ -1,97 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LayerLab — Smarter fragrance layering, made simple.</title>
+<style>
+:root { --bg:#0b0e14; --fg:#e6e6e6; --muted:#aaa; --card:#141925; --accent:#8ac8ff; --accent2:#ffd08a; --border:#263042; }
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,sans-serif}
+.app-header{text-align:center;padding:2rem 1rem;border-bottom:1px solid var(--border)}
+.tagline{color:var(--muted)}
+.container{max-width:1000px;margin:2rem auto;padding:0 1rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem}
+h2{margin-top:0}
+label{display:block;margin:.5rem 0 .25rem;font-size:.95rem}
+input,textarea{width:100%;padding:.6rem .75rem;border-radius:10px;border:1px solid var(--border);background:#0f1420;color:var(--fg)}
+button{margin-top:.8rem;padding:.6rem 1.1rem;border:none;border-radius:10px;background:var(--accent);color:#000;font-weight:700;cursor:pointer}
+.row{display:flex;gap:.6rem;flex-wrap:wrap}.row>*{flex:1}
+#library,#results,#comboResults{margin-top:1rem}
+.fragrance{border:1px solid var(--border);border-radius:10px;padding:.6rem .75rem;margin:.4rem 0;background:#0f1420}
+.result{border:1px solid var(--border);border-radius:10px;padding:.8rem;margin-top:.6rem;background:#0f1420}
+small.muted{color:var(--muted)}
+.app-footer{text-align:center;padding:1rem;color:var(--muted);border-top:1px solid var(--border)}
+input[type=file]{background:#0f1420;padding:.6rem;border-radius:10px;border:1px solid var(--border);color:var(--fg)}
+.badge{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:.15rem .5rem;margin-right:.3rem;font-size:.8rem;color:var(--muted)}
+.score{font-weight:900;font-size:1.4rem;color:var(--accent2)}
+.breakdown{font-size:.95rem;color:var(--muted)}
+.searchRow{display:flex;gap:.6rem;align-items:center}
+.tag{display:inline-block;background:#1a2233;border:1px solid var(--border);padding:.15rem .5rem;border-radius:999px;margin:.15rem .25rem 0 0;font-size:.75rem;color:var(--muted)}
+.pill{display:inline-block;background:#0f1420;border:1px solid var(--border);padding:.2rem .5rem;border-radius:6px;margin-left:.5rem;color:#b7e3ff}
+.inlineBtn{background:#2a3346;color:#e6e6e6;margin:0 .25rem;border-radius:8px;padding:.45rem .7rem}
+.status{font-size:.85rem;color:var(--muted);margin-top:.5rem}
+</style>
+</head>
+<body>
+  <header class="app-header">
+    <h1>LayerLab</h1>
+    <p class="tagline">Smarter fragrance layering, made simple.</p>
+  </header>
+
+  <main class="container">
+
+    <!-- 1) RATE LAYERING COMBO (four searchable inputs) -->
+    <section class="card">
+      <h2>Rate a Layering Combo (2–4 fragrances)</h2>
+      <p class="muted">Type to search by name or brand. Leave any box empty if you’re only rating 2 or 3.</p>
+      <div class="row">
+        <div>
+          <label>Fragrance 1</label>
+          <input id="combo1" list="fragranceList" placeholder="Start typing...">
+        </div>
+        <div>
+          <label>Fragrance 2</label>
+          <input id="combo2" list="fragranceList" placeholder="Start typing...">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Fragrance 3 (optional)</label>
+          <input id="combo3" list="fragranceList" placeholder="Start typing...">
+        </div>
+        <div>
+          <label>Fragrance 4 (optional)</label>
+          <input id="combo4" list="fragranceList" placeholder="Start typing...">
+        </div>
+      </div>
+      <div style="margin-top:.5rem">
+        <button id="rateComboBtn">✨ Rate Layering Combo</button>
+        <button id="clearComboBtn" class="inlineBtn">Clear</button>
+      </div>
+      <datalist id="fragranceList"></datalist>
+      <div id="comboResults"></div>
+      <div id="loadStatus" class="status"></div>
+    </section>
+
+    <!-- 2) ADD A FRAGRANCE -->
+    <section class="card">
+      <h2>Add a Fragrance</h2>
+      <div class="row">
+        <label>Name <input id="fName" placeholder="e.g., Amber Horizon" /></label>
+        <label>Brand <input id="fBrand" placeholder="e.g., PerfumeHouse" /></label>
+      </div>
+      <div class="row">
+        <label>Top Notes <input id="fTop" placeholder="comma-separated (e.g., bergamot, green tea)" /></label>
+        <label>Heart Notes <input id="fHeart" placeholder="e.g., rose, cardamom" /></label>
+        <label>Base Notes <input id="fBase" placeholder="e.g., cedar, amber, musk" /></label>
+      </div>
+      <button id="addBtn">Add to Library</button>
+      <small class="muted">Tip: raw notes are auto-mapped to families when recommending or scoring.</small>
+    </section>
+
+    <!-- 3) QUICK DISCOVERY -->
+    <section class="card">
+      <h2>Quick Discovery</h2>
+      <button id="randomBtn">🎲 Generate Random Combo</button>
+      <div id="results"></div>
+    </section>
+
+    <!-- 4) YOUR LIBRARY + SEARCH -->
+    <section class="card">
+      <h2>Your Library</h2>
+      <div class="searchRow">
+        <input id="searchInput" placeholder="Search by name, brand, or note (e.g., bergamot, amber, smoky)..." />
+        <button id="clearSearchBtn" class="inlineBtn">Clear</button>
+      </div>
+      <div id="library"></div>
+    </section>
+
+    <!-- 5) CSV IMPORT / EXPORT -->
+    <section class="card">
+      <h2>Import / Export</h2>
+      <div class="row">
+        <div>
+          <label>Import CSV (Kaggle/Fragrantica styles supported)
+            <input id="csvInput" type="file" accept=".csv,.cvs" />
+          </label>
+          <small class="muted">
+            Works with columns like: <code>Perfume/Name</code>, <code>Brand/Designer</code>, <code>Top Notes</code>, <code>Middle/Heart Notes</code>, <code>Base Notes</code>,
+            or a single <code>Notes</code> column containing “Top Notes: … | Middle Notes: … | Base Notes: …”.
+          </small>
+          <div id="importBadge"></div>
+        </div>
+        <div>
+          <button id="exportBtn">Export Library as CSV</button><br/>
+          <small class="muted">Downloads your current library.</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6) LEGAL -->
+    <section class="card">
+      <h2>Data & Legal</h2>
+      <p class="muted">
+        LayerLab does not scrape third-party sites. Import only data you have rights to use.
+      </p>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <small>© 2025 LayerLab — Created by PerfumePeter</small>
+  </footer>
+
 <script>
-/* ===== CSV AUTLOADER: load perfumes.csv from repo root on page load ===== */
-const CSV_URL = 'perfumes.csv';
-
-async function autoloadCSV() {
-  try {
-    const res = await fetch(CSV_URL + '?v=' + Date.now()); // bust cache on updates
-    if (!res.ok) {
-      console.warn('perfumes.csv not found (HTTP ' + res.status + '). Skipping autoload.');
-      return; // keep using localStorage/sample data
-    }
-    const text = await res.text();
-    const rows = text.split(/\r?\n/).filter(r => r.trim().length);
-    if (!rows.length) return;
-
-    const headers = parseCsvLine(rows[0]).map(h => (h || '').trim());
-    const H = headers.map(h => h.toLowerCase());
-
-    // Match common Kaggle/Fragrantica headers
-    const nameIdx  = pickOne(H, ["name","perfume","title"]);
-    const brandIdx = pickOne(H, ["brand","designer","house"]);
-    const topIdx   = pickOne(H, ["top notes","top","top_notes","notes_top","note_top"]);
-    const heartIdx = pickOne(H, ["middle notes","heart notes","heart","middle","mid","notes_middle","note_heart","note_mid"]);
-    const baseIdx  = pickOne(H, ["base notes","base","notes_base","note_base"]);
-    const notesIdx = pickOne(H, ["notes","all notes","pyramid","olfactory pyramid"]);
-
-    if (nameIdx < 0 || brandIdx < 0) {
-      console.warn("CSV missing name/brand columns. Autoload skipped.");
-      return;
-    }
-
-    const loaded = [];
-    for (let i = 1; i < rows.length; i++) {
-      const cols = parseCsvLine(rows[i]);
-      if (!cols || !cols.length) continue;
-
-      const name  = (cols[nameIdx]  || "").trim();
-      if (!name) continue;
-      const brand = (cols[brandIdx] || "").trim();
-
-      let top = [], heart = [], base = [];
-      if (topIdx>=0 || heartIdx>=0 || baseIdx>=0) {
-        top   = splitNotes(cols[topIdx]   || "");
-        heart = splitNotes(cols[heartIdx] || "");
-        base  = splitNotes(cols[baseIdx]  || "");
-      }
-      if ((!top.length && !heart.length && !base.length) && notesIdx>=0) {
-        const raw = String(cols[notesIdx]||"");
-        const parsed = parseCombinedNotes(raw);
-        top = parsed.top; heart = parsed.heart; base = parsed.base;
-        if (!top.length && !heart.length && !base.length) heart = splitNotes(raw);
-      }
-
-      loaded.push({ name, brand, notes: { top, heart, base }});
-    }
-
-    if (loaded.length) {
-      library = loaded;
-      save();
-      renderLibrary?.();
-      renderDatalist?.();
-      console.log(`Autoloaded ${loaded.length} fragrances from perfumes.csv`);
-    }
-  } catch (err) {
-    console.error('Failed to autoload CSV:', err);
-  }
-}
-
-// Helpers used by the autoloader (reuse your existing ones if present)
+/* ========= Helpers ========= */
+function escapeHtml(s){ s=String(s||""); return s.replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m])); }
+function lowerIncludes(hay, needle){ return String(hay||"").toLowerCase().includes(String(needle||"").toLowerCase()); }
+function splitNotes(s){ s=String(s||""); s=s.replace(/[\[\]"“”'()]/g,""); return s.split(/[|/;,]+/).map(x=>x.trim()).filter(Boolean); }
 function parseCsvLine(line){
   const out=[], re=/\s*(?:"([^"]*)"|([^,]*))\s*(?:,|$)/g; let m;
-  while((m=re.exec(line))!==null){ out.push(m[1] ?? m[2]); }
-  return out;
+  while((m=re.exec(line))!==null){ out.push(m[1] ?? m[2]); } return out;
 }
-function pickOne(headersLower, keys){
-  for (const k of keys){ const idx = headersLower.indexOf(k); if (idx>=0) return idx; }
-  return -1;
-}
+function pickOne(headersLower, keys){ for(const k of keys){ const i=headersLower.indexOf(k); if(i>=0) return i; } return -1; }
 function parseCombinedNotes(raw){
   const s = String(raw||"");
-  const grab = (label) => {
-    const m = s.match(new RegExp(label + "\\s*:\\s*([^|/]+)","i"));
-    return m ? splitNotes(m[1]) : [];
-  };
-  let top = grab("top notes?");
-  let heart = grab("(middle|heart) notes?");
-  let base = grab("base notes?");
-  if (!top.length && !heart.length && !base.length) {
-    const parts = s.split("|").map(x=>x.trim());
-    if (parts.length>=3) { top = splitNotes(parts[0]); heart = splitNotes(parts[1]); base = splitNotes(parts[2]); }
+  const grab = (label) => { const m = s.match(new RegExp(label + "\\s*:\\s*([^|/]+)","i")); return m ? splitNotes(m[1]) : []; };
+  let top = grab("top notes?"), heart = grab("(middle|heart) notes?"), base = grab("base notes?");
+  if(!top.length && !heart.length && !base.length){
+    const parts = s.split("|").map(x=>x.trim()); if(parts.length>=3){ top=splitNotes(parts[0]); heart=splitNotes(parts[1]); base=splitNotes(parts[2]); }
   }
   return { top, heart, base };
 }
+function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+function dot(a,b){ return a.reduce((s,v,i)=>s+v*b[i],0); }
+function norm(a){ return Math.sqrt(dot(a,a)); }
+function cosine(a,b){ const na=norm(a), nb=norm(b); return (na===0||nb===0)?0:dot(a,b)/(na*nb); }
 
-// Run after the page bootstraps
-window.addEventListener('DOMContentLoaded', autoloadCSV);
+/* ========= Mapping & similarity ========= */
+const MAP = {
+  "bergamot":"citrus","lemon":"citrus","lime":"citrus","grapefruit":"citrus","orange":"citrus","mandarin":"citrus","petitgrain":"citrus",
+  "green tea":"green","violet leaf":"green","galbanum":"green","basil":"herbal","mint":"herbal","rosemary":"aromatic","sage":"herbal","green":"green",
+  "rose":"floral","jasmine":"white_floral","tuberose":"white_floral","orange blossom":"white_floral","ylang-ylang":"floral","lily":"floral","white floral":"white_floral",
+  "cardamom":"spicy","black pepper":"spicy","pink pepper":"spicy","cinnamon":"spicy","clove":"spicy","nutmeg":"spicy","pepper":"spicy","spicy":"spicy",
+  "cedar":"woody","sandalwood":"woody","vetiver":"woody","oud":"woody","incense":"smoky","smoke":"smoky","myrrh":"resinous","labdanum":"resinous","frankincense":"resinous","resin":"resinous",
+  "amber":"amber","ambroxan":"amber","musk":"musky","tonka bean":"sweet","vanilla":"sweet","caramel":"gourmand","chocolate":"gourmand","praline":"gourmand","honey":"sweet",
+  "sea notes":"aquatic","marine":"aquatic","aldehydes":"aldehydic"
+};
+const FAMILIES = ["citrus","green","white_floral","floral","spicy","resinous","smoky","woody","musky","amber","sweet","gourmand","aquatic","aldehydic","herbal","aromatic"];
+const SIM = (function(){
+  const n=FAMILIES.length, M=Array.from({length:n},()=>Array(n).fill(0));
+  for(let i=0;i<n;i++) M[i][i]=1;
+  function s(a,b,v){ const i=FAMILIES.indexOf(a), j=FAMILIES.indexOf(b); if(i>=0&&j>=0){ M[i][j]=v; M[j][i]=v; } }
+  s("woody","smoky",0.6); s("woody","resinous",0.5); s("amber","sweet",0.55); s("amber","gourmand",0.45);
+  s("white_floral","floral",0.7); s("citrus","green",0.6); s("herbal","aromatic",0.7); s("musky","amber",0.5);
+  s("smoky","sweet",0.35); s("smoky","gourmand",0.3); s("citrus","amber",0.25); s("green","sweet",0.2); s("citrus","woody",0.3);
+  s("aldehydic","gourmand",-0.3); s("aldehydic","smoky",-0.25); s("aquatic","smoky",-0.25); s("aquatic","gourmand",-0.2); s("green","gourmand",-0.15);
+  return M;
+})();
+
+/* ========= State & helpers ========= */
+function toFamilies(list){ return list.map(n=>String(n||"").toLowerCase().trim()).filter(Boolean).map(n=>MAP[n]||n); }
+function accordVector(fr){
+  const v=Array(FAMILIES.length).fill(0);
+  function add(arr,w){ (arr||[]).forEach(n=>{ const fam=MAP[String(n).toLowerCase()]||String(n).toLowerCase(); const i=FAMILIES.indexOf(fam); if(i>=0) v[i]+=w; }); }
+  add(fr.notes.top,1.0); add(fr.notes.heart,1.5); add(fr.notes.base,2.0);
+  const m=Math.max(1,...v); return v.map(x=>x/m);
+}
+function familyLayerWeights(fr){
+  const mk=()=>Array(FAMILIES.length).fill(0); const top=mk(), heart=mk(), base=mk();
+  (fr.notes.top||[]).forEach(n=>{ const fam=MAP[String(n).toLowerCase()]||String(n).toLowerCase(); const i=FAMILIES.indexOf(fam); if(i>=0) top[i]+=1; });
+  (fr.notes.heart||[]).forEach(n=>{ const fam=MAP[String(n).toLowerCase()]||String(n).toLowerCase(); const i=FAMILIES.indexOf(fam); if(i>=0) heart[i]+=1.5; });
+  (fr.notes.base||[]).forEach(n=>{ const fam=MAP[String(n).toLowerCase()]||String(n).toLowerCase(); const i=FAMILIES.indexOf(fam); if(i>=0) base[i]+=2.0; });
+  const nz=v=>{ const m=Math.max(1,...v); return v.map(x=>x/m); }; return { top:nz(top), heart:nz(heart), base:nz(base) };
+}
+function sharedFamilies(A,B){
+  const fa = toFamilies([...(A.notes.top||[]),...(A.notes.heart||[]),...(A.notes.base||[])]);
+  const fb = toFamilies([...(B.notes.top||[]),...(B.notes.heart||[]),...(B.notes.base||[])]);
+  return Array.from(new Set(fa.filter(x=>fb.includes(x) && FAMILIES.includes(x))));
+}
+function pairClash(a,b){
+  let c=0; for(let i=0;i<FAMILIES.length;i++){ for(let j=0;j<FAMILIES.length;j++){ const s=SIM[i][j]; if(s<0) c += (a[i]*b[j])*(-s); } }
+  return clamp01(c/5);
+}
+function temporalHarmony(frA, frB){
+  const A=familyLayerWeights(frA), B=familyLayerWeights(frB);
+  const base=cosine(A.base,B.base), heart=cosine(A.heart,B.heart), top=cosine(A.top,B.top);
+  let t = 0.6*base + 0.35*heart - 0.25*top; t = (t + 0.25); return clamp01(t);
+}
+function scoreCombo(list){
+  const vecs=list.map(accordVector); let glue=0,contrast=0,clash=0,temporal=0,pairs=0;
+  for(let i=0;i<vecs.length;i++){ for(let j=i+1;j<vecs.length;j++){
+    const sim=cosine(vecs[i],vecs[j]); glue+=sim;
+    contrast += (1-sim)*(0.5+0.5*sim);
+    clash += pairClash(vecs[i],vecs[j]);
+    temporal += temporalHarmony(list[i],list[j]);
+    pairs++;
+  }}
+  if(pairs){ glue/=pairs; contrast/=pairs; clash/=pairs; temporal/=pairs; }
+  const w={glue:.34, contrast:.18, temporal:.28, clash:.20};
+  let total = w.glue*glue + w.contrast*contrast + w.temporal*temporal - w.clash*clash;
+  return { total:clamp01(total), glue, contrast, temporal, clash };
+}
+const fullKey = f => `${f.name} — ${f.brand}`.trim();
+
+/* ========= App state ========= */
+let library = []; // will be filled by CSV autoload or fallback
+function save(){ try{ localStorage.setItem("layerlab_lib", JSON.stringify(library)); }catch(e){} }
+
+/* ========= UI renderers ========= */
+function renderLibrary(){
+  const wrap=document.getElementById("library"); if(!wrap) return; wrap.innerHTML="";
+  const q=String(document.getElementById("searchInput")?.value||"").trim().toLowerCase();
+  const list = !q ? library : library.filter(f=>{
+    if(f.name && f.name.toLowerCase().includes(q)) return true;
+    if(f.brand && f.brand.toLowerCase().includes(q)) return true;
+    const all=[...(f.notes.top||[]),...(f.notes.heart||[]),...(f.notes.base||[])].map(x=>String(x).toLowerCase());
+    if(all.some(n=>n.includes(q) || (MAP[n]||"").includes(q))) return true;
+    return false;
+  });
+  list.forEach(f=>{
+    const el=document.createElement("div"); el.className="fragrance";
+    const fam=[...new Set(toFamilies([...(f.notes.top||[]),...(f.notes.heart||[]),...(f.notes.base||[])])
+      .filter(x=>FAMILIES.includes(x)))];
+    el.innerHTML = `
+      <strong>${escapeHtml(f.name)}</strong> <span style="opacity:.8">(${escapeHtml(f.brand)})</span><br/>
+      <small>Top:</small> ${(f.notes.top||[]).join(", ")||"—"}<br/>
+      <small>Heart:</small> ${(f.notes.heart||[]).join(", ")||"—"}<br/>
+      <small>Base:</small> ${(f.notes.base||[]).join(", ")||"—"}<br/>
+      ${fam.map(fm=>`<span class="tag">${fm}</span>`).join(" ")}
+    `;
+    wrap.appendChild(el);
+  });
+}
+function renderDatalist(){
+  const dl=document.getElementById("fragranceList"); if(!dl) return; dl.innerHTML="";
+  library.forEach(f=>{ const o=document.createElement("option"); o.value=fullKey(f); dl.appendChild(o); });
+}
+
+/* ========= Events ========= */
+document.getElementById("addBtn").addEventListener("click", function(){
+  const f={
+    name:String(document.getElementById("fName").value||"").trim()||"Untitled",
+    brand:String(document.getElementById("fBrand").value||"").trim(),
+    notes:{
+      top:splitNotes(document.getElementById("fTop").value),
+      heart:splitNotes(document.getElementById("fHeart").value),
+      base:splitNotes(document.getElementById("fBase").value)
+    }
+  };
+  library.push(f); save(); renderLibrary(); renderDatalist();
+  ["fName","fBrand","fTop","fHeart","fBase"].forEach(id=>document.getElementById(id).value="");
+});
+
+document.getElementById("randomBtn").addEventListener("click", function(){
+  if(library.length<2){ alert("Add at least 2 fragrances"); return; }
+  const i=Math.floor(Math.random()*library.length); let j=i; while(j===i) j=Math.floor(Math.random()*library.length);
+  const A=library[i], B=library[j], shared=sharedFamilies(A,B);
+  document.getElementById("results").innerHTML =
+    `<div class="result"><strong>${escapeHtml(A.name)}</strong> + <strong>${escapeHtml(B.name)}</strong><br/>
+      ${shared.length?`Shared families: ${shared.join(", ")}`:"Contrasting but complementary!"}</div>`;
+});
+
+document.getElementById("rateComboBtn").addEventListener("click", function(){
+  const vals=["combo1","combo2","combo3","combo4"].map(id=>String(document.getElementById(id).value||"").trim()).filter(Boolean);
+  if(vals.length<2){ alert("Please pick at least 2 fragrances."); return; }
+  const selected=[];
+  for(const v of vals){
+    let idx = library.findIndex(f => fullKey(f).toLowerCase()===v.toLowerCase());
+    if(idx<0) idx = library.findIndex(f => String(f.name).toLowerCase()===v.toLowerCase());
+    if(idx<0){ alert(`Not found in library: "${v}". Please pick from the suggestions.`); return; }
+    selected.push(library[idx]);
+  }
+  const res=scoreCombo(selected);
+  document.getElementById("comboResults").innerHTML =
+    `<div class="result">
+      <div class="score">Score: ${Math.round(res.total*100)} / 100</div>
+      <div class="breakdown">
+        Glue: ${(res.glue*100).toFixed(0)} · Contrast: ${(res.contrast*100).toFixed(0)} ·
+        Temporal: ${(res.temporal*100).toFixed(0)} · Clash: -${(res.clash*100).toFixed(0)}
+      </div>
+      <div style="margin-top:.5rem">${selected.map(f=>`<span class="badge">${escapeHtml(f.name)}</span>`).join(" ")}</div>
+    </div>`;
+});
+document.getElementById("clearComboBtn").addEventListener("click", function(){
+  ["combo1","combo2","combo3","combo4"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("comboResults").innerHTML="";
+});
+
+document.getElementById("searchInput").addEventListener("input", renderLibrary);
+document.getElementById("clearSearchBtn").addEventListener("click", function(){
+  const si=document.getElementById("searchInput"); if(si) si.value=""; renderLibrary();
+});
+
+/* CSV import/export */
+document.getElementById("csvInput").addEventListener("change", async function(e){
+  const file=e.target.files[0]; if(!file) return;
+  const text=await file.text(); const rows=text.split(/\r?\n/).filter(r=>r.trim().length);
+  if(!rows.length) return alert("CSV is empty");
+  const headers=parseCsvLine(rows[0]).map(h=>String(h||"").trim()); const H=headers.map(h=>h.toLowerCase());
+  const nameIdx=pickOne(H,["name","perfume","title"]), brandIdx=pickOne(H,["brand","designer","house"]);
+  const topIdx=pickOne(H,["top notes","top","top_notes","notes_top","note_top"]);
+  const heartIdx=pickOne(H,["middle notes","heart notes","heart","middle","mid","notes_middle","note_heart","note_mid"]);
+  const baseIdx=pickOne(H,["base notes","base","notes_base","note_base"]);
+  const notesIdx=pickOne(H,["notes","all notes","pyramid","olfactory pyramid"]);
+  document.getElementById("importBadge").innerHTML =
+    `<span class="pill">Detected: ${[
+      nameIdx>=0?"name":null, brandIdx>=0?"brand":null,
+      (topIdx>=0||heartIdx>=0||baseIdx>=0)?"top/middle/base":null,
+      notesIdx>=0?"notes":null].filter(Boolean).join(", ")||"none"}</span>`;
+  if(nameIdx<0||brandIdx<0) return alert("Missing Name/Brand headers.");
+  let imported=0;
+  for(let i=1;i<rows.length;i++){
+    const cols=parseCsvLine(rows[i]); if(!cols||!cols.length) continue;
+    const name=(cols[nameIdx]||"").trim(); if(!name) continue; const brand=(cols[brandIdx]||"").trim();
+    let top=[],heart=[],base=[];
+    if(topIdx>=0||heartIdx>=0||baseIdx>=0){ top=splitNotes(cols[topIdx]||""); heart=splitNotes(cols[heartIdx]||""); base=splitNotes(cols[baseIdx]||""); }
+    if(!top.length && !heart.length && !base.length && notesIdx>=0){
+      const raw=String(cols[notesIdx]||""); const p=parseCombinedNotes(raw);
+      top=p.top; heart=p.heart; base=p.base; if(!top.length && !heart.length && !base.length) heart=splitNotes(raw);
+    }
+    library.push({ name, brand, notes:{ top, heart, base } }); imported++;
+  }
+  save(); renderLibrary(); renderDatalist(); alert(`Imported ${imported} records.`);
+});
+
+document.getElementById("exportBtn").addEventListener("click", function(){
+  const rows=[["name","brand","top","heart","base"]];
+  library.forEach(f=>rows.push([f.name,f.brand,(f.notes.top||[]).join("; "),(f.notes.heart||[]).join("; "),(f.notes.base||[]).join("; ")]));
+  const csv=rows.map(r=>r.map(cell=>/[,"]/.test(cell)?('"'+String(cell).replace(/"/g,'""')+'"'):cell).join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"}); const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="layerlab_library.csv"; a.click(); URL.revokeObjectURL(url);
+});
+
+/* ========= Default dataset autoloader (perfumes.cvs, fallback to perfumes.csv) ========= */
+async function tryFetch(url){
+  const res = await fetch(url+'?v='+Date.now());
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return res.text();
+}
+async function autoloadDefaultCSV(){
+  const status=document.getElementById("loadStatus");
+  function setStatus(msg){ if(status) status.textContent = msg; }
+  try{
+    let text;
+    try { text = await tryFetch('perfumes.cvs'); setStatus('Loaded default dataset: perfumes.cvs'); }
+    catch(e1){
+      text = await tryFetch('perfumes.csv'); setStatus('Loaded default dataset: perfumes.csv');
+    }
+    const rows=text.split(/\r?\n/).filter(r=>r.trim().length);
+    if(!rows.length){ setStatus('Default file is empty.'); return; }
+    const headers=parseCsvLine(rows[0]).map(h=>String(h||"").trim()); const H=headers.map(h=>h.toLowerCase());
+    const nameIdx=pickOne(H,["name","perfume","title"]), brandIdx=pickOne(H,["brand","designer","house"]);
+    const topIdx=pickOne(H,["top notes","top","top_notes","notes_top","note_top"]);
+    const heartIdx=pickOne(H,["middle notes","heart notes","heart","middle","mid","notes_middle","note_heart","note_mid"]);
+    const baseIdx=pickOne(H,["base notes","base","notes_base","note_base"]);
+    const notesIdx=pickOne(H,["notes","all notes","pyramid","olfactory pyramid"]);
+    if(nameIdx<0||brandIdx<0){ setStatus('Default file missing Name/Brand columns.'); return; }
+    const loaded=[];
+    for(let i=1;i<rows.length;i++){
+      const cols=parseCsvLine(rows[i]); if(!cols||!cols.length) continue;
+      const name=(cols[nameIdx]||"").trim(); if(!name) continue; const brand=(cols[brandIdx]||"").trim();
+      let top=[],heart=[],base=[];
+      if(topIdx>=0||heartIdx>=0||baseIdx>=0){ top=splitNotes(cols[topIdx]||""); heart=splitNotes(cols[heartIdx]||""); base=splitNotes(cols[baseIdx]||""); }
+      if(!top.length && !heart.length && !base.length && notesIdx>=0){
+        const raw=String(cols[notesIdx]||""); const p=parseCombinedNotes(raw);
+        top=p.top; heart=p.heart; base=p.base; if(!top.length && !heart.length && !base.length) heart=splitNotes(raw);
+      }
+      loaded.push({ name, brand, notes:{ top, heart, base }});
+    }
+    if(loaded.length){
+      library = loaded;
+      save(); renderLibrary(); renderDatalist();
+      setStatus(`Loaded ${loaded.length} fragrances from default dataset.`);
+    } else {
+      setStatus('Default file parsed but contained no valid rows.');
+    }
+  }catch(err){
+    const status=document.getElementById("loadStatus");
+    if(status) status.textContent = 'No default dataset found (looked for perfumes.cvs then perfumes.csv).';
+    console.warn('Autoload default dataset failed:', err);
+  }
+}
+
+/* ========= Initial boot ========= */
+(function init(){
+  // start with any saved library; if empty, use fallback sample, then autoload
+  try {
+    const saved = JSON.parse(localStorage.getItem("layerlab_lib")||"[]");
+    library = Array.isArray(saved) && saved.length ? saved : [];
+  } catch(e){ library = []; }
+  if(!library.length) library = [
+    { name:"Amber Horizon", brand:"Aether Co", notes:{ top:["vanilla"], heart:["amber"], base:["woody","resinous"] } },
+    { name:"Citrus Veil", brand:"Solaire", notes:{ top:["bergamot","green tea"], heart:["orange blossom"], base:["musk"] } },
+    { name:"Velvet Smoke", brand:"NoirWorks", notes:{ top:["black pepper"], heart:["smoke"], base:["amber","cedar"] } }
+  ];
+  renderLibrary(); renderDatalist();
+  // try to autoload your default dataset
+  autoloadDefaultCSV();
+})();
 </script>
+</body>
+</html>
