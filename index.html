@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LayerLab — Smarter fragrance layering, made simple.</title>
+  <style>
+    :root {
+      --bg: #0b0e14; --fg: #e6e6e6; --muted: #aaa; --card: #141925;
+      --accent: #8ac8ff; --border: #263042;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: Inter, system-ui, sans-serif; }
+    .app-header { text-align: center; padding: 2rem 1rem; border-bottom: 1px solid var(--border); }
+    .tagline { color: var(--muted); }
+    .container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+    label { display: block; margin: 0.5rem 0; font-size: 0.9rem; color: var(--fg); }
+    input { width: 100%; padding: 0.6rem 0.75rem; border-radius: 10px; border: 1px solid var(--border); background: #0f1420; color: var(--fg); }
+    button { margin-top: 0.8rem; padding: 0.6rem 1.1rem; border: none; border-radius: 10px; background: var(--accent); color: #000; font-weight: 700; cursor: pointer; }
+    #library, #results { margin-top: 1rem; }
+    .fragrance { border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.75rem; margin: 0.4rem 0; background: #0f1420; }
+    .result { border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem; margin-top: 0.6rem; background: #0f1420; }
+    .row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .app-footer { text-align: center; padding: 1rem; color: var(--muted); border-top: 1px solid var(--border); }
+    small a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <h1>LayerLab</h1>
+    <p class="tagline">Smarter fragrance layering, made simple.</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Add a Fragrance</h2>
+      <label>Name <input id="fName" placeholder="e.g., Amber Horizon" /></label>
+      <label>Brand <input id="fBrand" placeholder="e.g., PerfumeHouse" /></label>
+      <div class="row">
+        <label style="flex:1">Top Notes <input id="fTop" placeholder="citrus, green" /></label>
+        <label style="flex:1">Heart Notes <input id="fHeart" placeholder="floral, spicy" /></label>
+        <label style="flex:1">Base Notes <input id="fBase" placeholder="woody, amber, musky" /></label>
+      </div>
+      <button id="addBtn">Add to Library</button>
+    </section>
+
+    <section class="card">
+      <h2>Your Library</h2>
+      <div id="library"></div>
+    </section>
+
+    <section class="card">
+      <h2>Recommendations</h2>
+      <button id="randomBtn">🎲 Generate Random Combo</button>
+      <div id="results"></div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <small>© 2025 LayerLab — Created by PerfumePeter</small>
+  </footer>
+
+  <script>
+    // ======= Sample data =======
+    const sampleFragrances = [
+      { name: "Amber Horizon", brand: "Aether Co", notes: { top:["vanilla"], heart:["amber"], base:["woody","resinous"]}},
+      { name: "Citrus Veil", brand: "Solaire", notes: { top:["citrus","green"], heart:["white floral"], base:["musky"]}},
+      { name: "Velvet Smoke", brand: "NoirWorks", notes: { top:["spicy"], heart:["smoky"], base:["amber","woody"]}},
+      { name: "Ocean Muse", brand: "BlueNote", notes: { top:["aquatic","green"], heart:["aromatic"], base:["musky"]}},
+      { name: "Rose Ember", brand: "Lumine", notes: { top:["floral"], heart:["spicy"], base:["amber","sweet"]}},
+    ];
+
+    // ======= State =======
+    let library = JSON.parse(localStorage.getItem("layerlab_lib") || "[]");
+    if (library.length === 0) library = sampleFragrances.slice();
+
+    function saveLibrary(){ localStorage.setItem("layerlab_lib", JSON.stringify(library)); }
+
+    // ======= Render =======
+    function renderLibrary() {
+      const div = document.getElementById("library");
+      div.innerHTML = "";
+      library.forEach((f, i) => {
+        const el = document.createElement("div");
+        el.className = "fragrance";
+        el.innerHTML = `
+          <strong>${escapeHtml(f.name)}</strong> <span style="opacity:.8">(${escapeHtml(f.brand)})</span><br/>
+          <small>Top:</small> ${f.notes.top.join(", ") || "—"}<br/>
+          <small>Heart:</small> ${f.notes.heart.join(", ") || "—"}<br/>
+          <small>Base:</small> ${f.notes.base.join(", ") || "—"}
+        `;
+        div.appendChild(el);
+      });
+    }
+
+    // ======= Helpers =======
+    function escapeHtml(s=""){ return s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;" }[m])); }
+    function sharedNotes(a,b){
+      const allA = [...a.top, ...a.heart, ...a.base];
+      const allB = [...b.top, ...b.heart, ...b.base];
+      return [...new Set(allA.filter(x => allB.includes(x)))];
+    }
+
+    // ======= Actions =======
+    document.getElementById("addBtn").onclick = () => {
+      const f = {
+        name: document.getElementById("fName").value.trim() || "Untitled",
+        brand: document.getElementById("fBrand").value.trim(),
+        notes: {
+          top:  document.getElementById("fTop").value.split(",").map(s=>s.trim()).filter(Boolean),
+          heart:document.getElementById("fHeart").value.split(",").map(s=>s.trim()).filter(Boolean),
+          base: document.getElementById("fBase").value.split(",").map(s=>s.trim()).filter(Boolean),
+        }
+      };
+      library.push(f); saveLibrary(); renderLibrary();
+      document.getElementById("fName").value = "";
+      document.getElementById("fBrand").value = "";
+      document.getElementById("fTop").value = "";
+      document.getElementById("fHeart").value = "";
+      document.getElementById("fBase").value = "";
+    };
+
+    document.getElementById("randomBtn").onclick = () => {
+      if (library.length < 2) { alert("Add at least 2 fragrances"); return; }
+      const i = Math.floor(Math.random()*library.length);
+      let j = i; while (j === i) j = Math.floor(Math.random()*library.length);
+      const A = library[i], B = library[j];
+      const shared = sharedNotes(A.notes, B.notes);
+      const resultDiv = document.getElementById("results");
+      resultDiv.innerHTML = `
+        <div class="result">
+          <strong>${escapeHtml(A.name)}</strong> + <strong>${escapeHtml(B.name)}</strong><br/>
+          ${shared.length ? ("Shared notes: " + shared.join(", ")) : "Contrasting but complementary!"}
+        </div>
+      `;
+    };
+
+    // Initial paint
+    renderLibrary();
+  </script>
+</body>
+</html>
