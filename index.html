@@ -486,7 +486,103 @@ function familyLayerWeights(fr){
   const normz = v => { const m=Math.max(1,...v); return v.map(x=>x/m); };
   return { top:normz(top), heart:normz(heart), base:normz(base) };
 }
+<script>
+/* ===== CSV AUTLOADER: load perfumes.csv from repo root on page load ===== */
+const CSV_URL = 'perfumes.csv';
 
+async function autoloadCSV() {
+  try {
+    const res = await fetch(CSV_URL + '?v=' + Date.now()); // bust cache on updates
+    if (!res.ok) {
+      console.warn('perfumes.csv not found (HTTP ' + res.status + '). Skipping autoload.');
+      return; // keep using localStorage/sample data
+    }
+    const text = await res.text();
+    const rows = text.split(/\r?\n/).filter(r => r.trim().length);
+    if (!rows.length) return;
+
+    const headers = parseCsvLine(rows[0]).map(h => (h || '').trim());
+    const H = headers.map(h => h.toLowerCase());
+
+    // Match common Kaggle/Fragrantica headers
+    const nameIdx  = pickOne(H, ["name","perfume","title"]);
+    const brandIdx = pickOne(H, ["brand","designer","house"]);
+    const topIdx   = pickOne(H, ["top notes","top","top_notes","notes_top","note_top"]);
+    const heartIdx = pickOne(H, ["middle notes","heart notes","heart","middle","mid","notes_middle","note_heart","note_mid"]);
+    const baseIdx  = pickOne(H, ["base notes","base","notes_base","note_base"]);
+    const notesIdx = pickOne(H, ["notes","all notes","pyramid","olfactory pyramid"]);
+
+    if (nameIdx < 0 || brandIdx < 0) {
+      console.warn("CSV missing name/brand columns. Autoload skipped.");
+      return;
+    }
+
+    const loaded = [];
+    for (let i = 1; i < rows.length; i++) {
+      const cols = parseCsvLine(rows[i]);
+      if (!cols || !cols.length) continue;
+
+      const name  = (cols[nameIdx]  || "").trim();
+      if (!name) continue;
+      const brand = (cols[brandIdx] || "").trim();
+
+      let top = [], heart = [], base = [];
+      if (topIdx>=0 || heartIdx>=0 || baseIdx>=0) {
+        top   = splitNotes(cols[topIdx]   || "");
+        heart = splitNotes(cols[heartIdx] || "");
+        base  = splitNotes(cols[baseIdx]  || "");
+      }
+      if ((!top.length && !heart.length && !base.length) && notesIdx>=0) {
+        const raw = String(cols[notesIdx]||"");
+        const parsed = parseCombinedNotes(raw);
+        top = parsed.top; heart = parsed.heart; base = parsed.base;
+        if (!top.length && !heart.length && !base.length) heart = splitNotes(raw);
+      }
+
+      loaded.push({ name, brand, notes: { top, heart, base }});
+    }
+
+    if (loaded.length) {
+      library = loaded;
+      save();
+      renderLibrary?.();
+      renderDatalist?.();
+      console.log(`Autoloaded ${loaded.length} fragrances from perfumes.csv`);
+    }
+  } catch (err) {
+    console.error('Failed to autoload CSV:', err);
+  }
+}
+
+// Helpers used by the autoloader (reuse your existing ones if present)
+function parseCsvLine(line){
+  const out=[], re=/\s*(?:"([^"]*)"|([^,]*))\s*(?:,|$)/g; let m;
+  while((m=re.exec(line))!==null){ out.push(m[1] ?? m[2]); }
+  return out;
+}
+function pickOne(headersLower, keys){
+  for (const k of keys){ const idx = headersLower.indexOf(k); if (idx>=0) return idx; }
+  return -1;
+}
+function parseCombinedNotes(raw){
+  const s = String(raw||"");
+  const grab = (label) => {
+    const m = s.match(new RegExp(label + "\\s*:\\s*([^|/]+)","i"));
+    return m ? splitNotes(m[1]) : [];
+  };
+  let top = grab("top notes?");
+  let heart = grab("(middle|heart) notes?");
+  let base = grab("base notes?");
+  if (!top.length && !heart.length && !base.length) {
+    const parts = s.split("|").map(x=>x.trim());
+    if (parts.length>=3) { top = splitNotes(parts[0]); heart = splitNotes(parts[1]); base = splitNotes(parts[2]); }
+  }
+  return { top, heart, base };
+}
+
+// Run after the page bootstraps
+window.addEventListener('DOMContentLoaded', autoloadCSV);
+</script>
 /* =======================
    Initial paint
 ======================= */
