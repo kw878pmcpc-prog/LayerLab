@@ -1,251 +1,765 @@
-{\rtf1\ansi\ansicpg1252\cocoartf2822
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
-\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LayerLab – Fragrance Layering Analyzer</title>
 
-\f0\fs24 \cf0 <!DOCTYPE html>\
-<html lang="en">\
-<head>\
-  <meta charset="UTF-8" />\
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />\
-  <title>LayerLab \'96 Fragrance Layering Analyzer</title>\
-\
-  <!-- Google Fonts -->\
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">\
-\
-  <!-- PapaParse for CSV -->\
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>\
-\
-  <style>\
-    :root \{\
-      --bg-color: #0e0e10;\
-      --card-bg: #1a1a1d;\
-      --text-color: #e0e0e0;\
-      --accent: #b76cff;\
-      --accent-light: #d5a8ff;\
-    \}\
-    body \{\
-      background-color: var(--bg-color);\
-      font-family: 'Poppins', sans-serif;\
-      color: var(--text-color);\
-      display: flex;\
-      flex-direction: column;\
-      align-items: center;\
-      min-height: 100vh;\
-      margin: 0;\
-      padding: 2rem;\
-    \}\
-    h1 \{\
-      color: var(--accent-light);\
-      font-size: 2.2rem;\
-      margin-bottom: 1.5rem;\
-    \}\
-    .card \{\
-      background: var(--card-bg);\
-      padding: 2rem;\
-      border-radius: 1rem;\
-      box-shadow: 0 0 15px rgba(183, 108, 255, 0.2);\
-      max-width: 600px;\
-      width: 100%;\
-    \}\
-    select, input, button \{\
-      width: 100%;\
-      padding: 0.6rem;\
-      border-radius: 0.5rem;\
-      border: none;\
-      margin: 0.5rem 0;\
-      background-color: #222;\
-      color: var(--text-color);\
-      font-size: 1rem;\
-    \}\
-    select:focus, input:focus \{\
-      outline: 2px solid var(--accent);\
-    \}\
-    button \{\
-      background: var(--accent);\
-      color: #fff;\
-      cursor: pointer;\
-      font-weight: bold;\
-      transition: 0.2s;\
-    \}\
-    button:hover \{\
-      background: var(--accent-light);\
-    \}\
-    #result \{\
-      margin-top: 1.5rem;\
-      text-align: center;\
-    \}\
-    .score \{\
-      font-size: 2.5rem;\
-      color: var(--accent-light);\
-      font-weight: bold;\
-    \}\
-    .add-btn \{\
-      background: none;\
-      color: var(--accent);\
-      border: 1px solid var(--accent);\
-      margin-top: 1rem;\
-    \}\
-    .hidden \{\
-      display: none;\
-    \}\
-    .modal \{\
-      position: fixed;\
-      top: 0; left: 0; width: 100%; height: 100%;\
-      background: rgba(0, 0, 0, 0.7);\
-      display: flex;\
-      align-items: center;\
-      justify-content: center;\
-    \}\
-    .modal-content \{\
-      background: var(--card-bg);\
-      padding: 2rem;\
-      border-radius: 1rem;\
-      width: 90%;\
-      max-width: 400px;\
-    \}\
-  </style>\
-</head>\
-<body>\
-  <h1>\uc0\u55357 \u56476  LayerLab</h1>\
-  <div class="card">\
-    <label>Select up to 4 fragrances:</label>\
-    <select id="frag1"><option value="">Select Fragrance 1</option></select>\
-    <select id="frag2"><option value="">Select Fragrance 2</option></select>\
-    <select id="frag3"><option value="">(Optional) Fragrance 3</option></select>\
-    <select id="frag4"><option value="">(Optional) Fragrance 4</option></select>\
-\
-    <button id="calcBtn">Calculate Combo Score</button>\
-    <button class="add-btn" id="addBtn">+ Add a Missing Fragrance</button>\
-\
-    <div id="result"></div>\
-  </div>\
-\
-  <!-- Add Fragrance Modal -->\
-  <div id="addModal" class="modal hidden">\
-    <div class="modal-content">\
-      <h3>Add a New Fragrance</h3>\
-      <input id="newName" placeholder="Perfume Name" />\
-      <input id="newBrand" placeholder="Brand" />\
-      <input id="newGender" placeholder="Gender" />\
-      <input id="newTop" placeholder="Top Notes (comma-separated)" />\
-      <input id="newMiddle" placeholder="Middle Notes (comma-separated)" />\
-      <input id="newBase" placeholder="Base Notes (comma-separated)" />\
-      <input id="newAccords" placeholder="Main Accords (comma-separated)" />\
-      <button id="saveFrag">Save</button>\
-      <button id="closeModal">Cancel</button>\
-    </div>\
-  </div>\
-\
-  <script>\
-    let fragrances = [];\
-    const selects = [frag1, frag2, frag3, frag4];\
-    const resultDiv = document.getElementById("result");\
-\
-    // Load CSV\
-    Papa.parse("fragrances.csv", \{\
-      download: true,\
-      header: true,\
-      delimiter: ";",\
-      complete: (res) => \{\
-        fragrances = res.data.filter(f => f.Perfume);\
-        populateDropdowns();\
-      \}\
-    \});\
-\
-    function populateDropdowns() \{\
-      selects.forEach(sel => \{\
-        fragrances.forEach(f => \{\
-          const opt = document.createElement("option");\
-          opt.value = f.Perfume;\
-          opt.textContent = `$\{f.Perfume\} ($\{f.Brand\})`;\
-          sel.appendChild(opt);\
-        \});\
-      \});\
-    \}\
-\
-    function getSelectedFragrances() \{\
-      return selects.map(sel => fragrances.find(f => f.Perfume === sel.value)).filter(f => f);\
-    \}\
-\
-    function calculateScore(selected) \{\
-      if (selected.length < 2) return 0;\
-      let score = 0;\
-      let totalPairs = 0;\
-\
-      for (let i = 0; i < selected.length; i++) \{\
-        for (let j = i + 1; j < selected.length; j++) \{\
-          totalPairs++;\
-          score += compareFragrances(selected[i], selected[j]);\
-        \}\
-      \}\
-\
-      return Math.round(score / totalPairs);\
-    \}\
-\
-    function compareFragrances(a, b) \{\
-      if (!a || !b) return 0;\
-      let s = 0;\
-\
-      // Shared accords\
-      const accordsA = [a.mainaccord1, a.mainaccord2, a.mainaccord3, a.mainaccord4, a.mainaccord5].filter(Boolean);\
-      const accordsB = [b.mainaccord1, b.mainaccord2, b.mainaccord3, b.mainaccord4, b.mainaccord5].filter(Boolean);\
-      const sharedAccords = accordsA.filter(ac => accordsB.includes(ac)).length;\
-      s += sharedAccords * 15;\
-\
-      // Shared notes\
-      const notesA = (a.Top + "," + a.Middle + "," + a.Base).split(",").map(n => n.trim().toLowerCase());\
-      const notesB = (b.Top + "," + b.Middle + "," + b.Base).split(",").map(n => n.trim().toLowerCase());\
-      const sharedNotes = notesA.filter(n => n && notesB.includes(n)).length;\
-      s += Math.min(sharedNotes * 5, 20);\
-\
-      // Gender match\
-      if (a.Gender && a.Gender === b.Gender) s += 5;\
-\
-      return Math.min(s, 100);\
-    \}\
-\
-    calcBtn.onclick = () => \{\
-      const selected = getSelectedFragrances();\
-      if (selected.length < 2) \{\
-        resultDiv.innerHTML = "<p>Please select at least 2 fragrances.</p>";\
-        return;\
-      \}\
-      const score = calculateScore(selected);\
-      resultDiv.innerHTML = `<p class="score">$\{score\}/100</p><p>$\{score >= 70 ? "\uc0\u55357 \u56613  Excellent layering potential!" : score >= 40 ? "\u55357 \u56481  Might work with balance." : "\u9888 \u65039  Not a great match."\}</p>`;\
-    \};\
-\
-    // Modal for adding new fragrance\
-    const modal = document.getElementById("addModal");\
-    addBtn.onclick = () => modal.classList.remove("hidden");\
-    closeModal.onclick = () => modal.classList.add("hidden");\
-\
-    saveFrag.onclick = () => \{\
-      const newF = \{\
-        Perfume: newName.value,\
-        Brand: newBrand.value,\
-        Gender: newGender.value,\
-        Top: newTop.value,\
-        Middle: newMiddle.value,\
-        Base: newBase.value,\
-        mainaccord1: newAccords.value.split(",")[0]?.trim(),\
-        mainaccord2: newAccords.value.split(",")[1]?.trim(),\
-        mainaccord3: newAccords.value.split(",")[2]?.trim(),\
-        mainaccord4: newAccords.value.split(",")[3]?.trim(),\
-        mainaccord5: newAccords.value.split(",")[4]?.trim()\
-      \};\
-      fragrances.push(newF);\
-      selects.forEach(sel => \{\
-        const opt = document.createElement("option");\
-        opt.value = newF.Perfume;\
-        opt.textContent = `$\{newF.Perfume\} ($\{newF.Brand\})`;\
-        sel.appendChild(opt);\
-      \});\
-      modal.classList.add("hidden");\
-    \};\
-  </script>\
-</body>\
-</html>\
-}
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #050509;
+      --bg-elevated: #111119;
+      --bg-soft: #171722;
+      --border-subtle: #26263a;
+      --text: #f2ecff;
+      --muted: #9b93b8;
+      --accent: #b76cff;
+      --accent-soft: rgba(183,108,255,0.16);
+      --radius-xl: 18px;
+      --radius-full: 999px;
+      --transition-fast: 0.18s ease-out;
+      --shadow-soft: 0 14px 40px rgba(0,0,0,0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      min-height: 100vh;
+      font-family: "Poppins", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(183,108,255,0.10), transparent 60%),
+        var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .wrapper {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 22px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2.3rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header h1 span.icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 1.2rem;
+    }
+
+    header p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 2.2fr) minmax(260px, 1.3fr);
+      gap: 18px;
+    }
+
+    .card {
+      background: linear-gradient(145deg, var(--bg-elevated), #080810);
+      border-radius: var(--radius-xl);
+      padding: 18px 18px 16px;
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-soft);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at top, rgba(183,108,255,0.04), transparent),
+        radial-gradient(circle at right, rgba(183,108,255,0.02), transparent);
+      opacity: 0.9;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .card > * {
+      position: relative;
+      z-index: 2;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .card-header span.tag {
+      padding: 2px 9px;
+      border-radius: var(--radius-full);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+    }
+
+    label {
+      display: block;
+      margin: 8px 2px 4px;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+
+    .frag-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .frag-input-wrap {
+      position: relative;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 9px 11px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.03);
+      background: var(--bg-soft);
+      color: var(--text);
+      font-size: 0.82rem;
+      outline: none;
+      transition: border var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(183,108,255,0.25);
+      background: #131320;
+      transform: translateY(-1px);
+    }
+
+    input::placeholder {
+      color: #58526d;
+    }
+
+    .frag-label-index {
+      position: absolute;
+      left: 9px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.7rem;
+      color: var(--accent);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .frag-input {
+      padding-left: 26px !important;
+    }
+
+    .hint {
+      margin-top: 5px;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    button.primary {
+      margin-top: 12px;
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: var(--radius-full);
+      border: none;
+      background: linear-gradient(90deg, var(--accent), #8a51ff);
+      color: #07040f;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: all var(--transition-fast);
+    }
+
+    button.primary span.icon {
+      font-size: 1rem;
+    }
+
+    button.primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 35px rgba(0,0,0,0.9);
+      background: linear-gradient(90deg, #c088ff, var(--accent));
+    }
+
+    .result {
+      margin-top: 14px;
+      padding: 10px 10px 9px;
+      border-radius: 14px;
+      background: rgba(10,10,20,0.96);
+      border: 1px solid rgba(183,108,255,0.18);
+      backdrop-filter: blur(12px);
+      transition: opacity var(--transition-fast), transform var(--transition-fast);
+    }
+
+    .result.hidden {
+      opacity: 0;
+      transform: translateY(4px);
+      pointer-events: none;
+    }
+
+    .score-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+    }
+
+    .score-value {
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 2px 0 2px;
+    }
+
+    .score-bar-wrap {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: #181820;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #6131ff, var(--accent));
+      transition: width 0.4s ease-out;
+    }
+
+    .score-text {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .score-text strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Add fragrance card */
+    .card.small {
+      padding: 14px 14px 12px;
+    }
+
+    .add-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .add-mini-label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-left: 2px;
+    }
+
+    button.secondary {
+      margin-top: 8px;
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: var(--radius-full);
+      border: 1px solid rgba(183,108,255,0.45);
+      background: transparent;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all var(--transition-fast);
+    }
+
+    button.secondary:hover {
+      background: var(--accent-soft);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 22px rgba(0,0,0,0.72);
+    }
+
+    .status {
+      margin-top: 4px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      min-height: 14px;
+    }
+
+    .status.ok {
+      color: #82ffcd;
+    }
+
+    .status.err {
+      color: #ff7a9b;
+    }
+
+    footer {
+      margin-top: 14px;
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    @media (max-width: 780px) {
+      body {
+        padding: 16px;
+      }
+      header h1 {
+        font-size: 1.7rem;
+      }
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <header>
+      <h1><span class="icon">🧪</span>LayerLab</h1>
+      <p>Drop in 2–4 scents. Get an instant, data-based layering compatibility score out of 100.</p>
+    </header>
+
+    <div class="layout">
+      <!-- MAIN ANALYZER -->
+      <section class="card">
+        <div class="card-header">
+          <h2>Layering Combo Analyzer</h2>
+          <span class="tag">Alpha</span>
+        </div>
+
+        <label>Select 2–4 fragrances (type to search)</label>
+        <div class="frag-row">
+          <div class="frag-input-wrap">
+            <span class="frag-label-index">1</span>
+            <input id="f1" class="frag-input" list="fragList" type="text"
+                   placeholder="Start typing name or brand..." autocomplete="off" />
+          </div>
+          <div class="frag-input-wrap">
+            <span class="frag-label-index">2</span>
+            <input id="f2" class="frag-input" list="fragList" type="text"
+                   placeholder="Second fragrance..." autocomplete="off" />
+          </div>
+          <div class="frag-input-wrap">
+            <span class="frag-label-index">3</span>
+            <input id="f3" class="frag-input" list="fragList" type="text"
+                   placeholder="(Optional) Third fragrance..." autocomplete="off" />
+          </div>
+          <div class="frag-input-wrap">
+            <span class="frag-label-index">4</span>
+            <input id="f4" class="frag-input" list="fragList" type="text"
+                   placeholder="(Optional) Fourth fragrance..." autocomplete="off" />
+          </div>
+        </div>
+        <p class="hint">Use the same exact label as suggested (e.g. <strong>Perfume Name (Brand)</strong>). At least two selections are required.</p>
+
+        <button class="primary" id="analyzeBtn">
+          <span class="icon">⚡</span> Analyze Layering Combo
+        </button>
+
+        <div id="result" class="result hidden">
+          <div class="score-label">Layering compatibility</div>
+          <div class="score-value" id="scoreValue">0 / 100</div>
+          <div class="score-bar-wrap">
+            <div class="score-bar-fill" id="scoreBar"></div>
+          </div>
+          <div class="score-text" id="scoreText"></div>
+        </div>
+      </section>
+
+      <!-- ADD FRAGRANCE -->
+      <section class="card small">
+        <div class="card-header">
+          <h2>Add a Missing Fragrance</h2>
+        </div>
+        <p class="hint">Not in the list? Add it here and it becomes instantly available in LayerLab (local only).</p>
+
+        <div class="add-grid">
+          <div>
+            <div class="add-mini-label">Name</div>
+            <input id="addName" type="text" placeholder="Perfume Name" />
+          </div>
+          <div>
+            <div class="add-mini-label">Brand</div>
+            <input id="addBrand" type="text" placeholder="Brand" />
+          </div>
+          <div>
+            <div class="add-mini-label">Gender (M/F/U)</div>
+            <input id="addGender" type="text" placeholder="Optional" />
+          </div>
+          <div>
+            <div class="add-mini-label">Top notes</div>
+            <input id="addTop" type="text" placeholder="e.g. Bergamot, Lemon" />
+          </div>
+          <div>
+            <div class="add-mini-label">Middle notes</div>
+            <input id="addMiddle" type="text" placeholder="e.g. Rose, Jasmine" />
+          </div>
+          <div>
+            <div class="add-mini-label">Base notes</div>
+            <input id="addBase" type="text" placeholder="e.g. Vanilla, Musk" />
+          </div>
+          <div>
+            <div class="add-mini-label">Main accords (up to 5)</div>
+            <input id="addAccords" type="text" placeholder="e.g. Sweet, Woody, Amber..." />
+          </div>
+        </div>
+
+        <button class="secondary" id="addBtn">
+          <span>+ Add to suggestion list</span>
+        </button>
+        <div id="addStatus" class="status"></div>
+      </section>
+    </div>
+
+    <footer>
+      Built for fragrance nerds. Data stays client-side.
+    </footer>
+  </div>
+
+  <!-- Shared datalist for search suggestions -->
+  <datalist id="fragList"></datalist>
+
+  <script>
+    // === Data storage ===
+    let fragrances = []; // objects shaped from CSV + user-added
+
+    const fragInputs = [
+      document.getElementById("f1"),
+      document.getElementById("f2"),
+      document.getElementById("f3"),
+      document.getElementById("f4"),
+    ];
+    const fragListEl = document.getElementById("fragList");
+    const resultEl = document.getElementById("result");
+    const scoreValueEl = document.getElementById("scoreValue");
+    const scoreBarEl = document.getElementById("scoreBar");
+    const scoreTextEl = document.getElementById("scoreText");
+    const addStatusEl = document.getElementById("addStatus");
+
+    // === Init ===
+    window.addEventListener("DOMContentLoaded", () => {
+      loadCSV();
+      document.getElementById("analyzeBtn").addEventListener("click", onAnalyze);
+      document.getElementById("addBtn").addEventListener("click", onAddFragrance);
+    });
+
+    // === Load CSV from repo root ===
+    async function loadCSV() {
+      try {
+        const res = await fetch("fragrances.csv", { cache: "no-store" });
+        if (!res.ok) throw new Error("CSV not found");
+        const text = await res.text();
+
+        const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+        if (lines.length <= 1) throw new Error("CSV is empty");
+
+        const headers = lines[0].split(";").map(h => h.trim());
+        for (let i = 1; i < lines.length; i++) {
+          const row = lines[i].split(";");
+          if (!row.length || !row[1]) continue; // skip if no Perfume
+          const obj = {};
+          headers.forEach((h, idx) => {
+            obj[h] = (row[idx] || "").trim();
+          });
+          fragrances.push(obj);
+        }
+
+        rebuildDatalist();
+      } catch (err) {
+        console.error("Error loading CSV:", err);
+        addStatusEl.classList.add("err");
+        addStatusEl.textContent =
+          "Couldn't auto-load fragrances.csv. Ensure it’s in the same folder as index.html (semicolon-separated).";
+      }
+    }
+
+    // === Helpers ===
+    function formatLabel(f) {
+      const name = (f.Perfume || "").trim();
+      const brand = (f.Brand || "").trim();
+      if (!name) return "";
+      return brand ? `${name} (${brand})` : name;
+    }
+
+    function rebuildDatalist() {
+      fragListEl.innerHTML = "";
+      const labels = new Set();
+      fragrances.forEach(f => {
+        const label = formatLabel(f);
+        if (label && !labels.has(label)) {
+          labels.add(label);
+          const opt = document.createElement("option");
+          opt.value = label;
+          fragListEl.appendChild(opt);
+        }
+      });
+    }
+
+    function findFragranceByLabel(label) {
+      if (!label) return null;
+      const trimmed = label.trim().toLowerCase();
+      return fragrances.find(f => formatLabel(f).toLowerCase() === trimmed) || null;
+    }
+
+    function parseNotes(str) {
+      return (str || "")
+        .split(",")
+        .map(n => n.trim().toLowerCase())
+        .filter(n => n.length > 0);
+    }
+
+    function parseAccords(f) {
+      return [
+        f.mainaccord1,
+        f.mainaccord2,
+        f.mainaccord3,
+        f.mainaccord4,
+        f.mainaccord5,
+      ]
+        .map(a => (a || "").trim().toLowerCase())
+        .filter(a => a.length > 0);
+    }
+
+    function uniqueIntersection(a, b) {
+      const setB = new Set(b);
+      return [...new Set(a)].filter(x => setB.has(x));
+    }
+
+    function normalizeGender(g) {
+      const val = (g || "").toString().trim().toLowerCase();
+      if (!val) return "";
+      if (val.startsWith("m")) return "m";
+      if (val.startsWith("f")) return "f";
+      return "u";
+    }
+
+    // === Scoring between 2 frags ===
+    function compareFragrances(a, b) {
+      if (!a || !b) return 0;
+      let score = 0;
+
+      // Main accords (up to 75)
+      const accA = parseAccords(a);
+      const accB = parseAccords(b);
+      const sharedAcc = uniqueIntersection(accA, accB).length;
+      score += Math.min(sharedAcc * 15, 75);
+
+      // Notes overlap (up to 15)
+      const notesA = [
+        ...parseNotes(a.Top),
+        ...parseNotes(a.Middle),
+        ...parseNotes(a.Base),
+      ];
+      const notesB = [
+        ...parseNotes(b.Top),
+        ...parseNotes(b.Middle),
+        ...parseNotes(b.Base),
+      ];
+      const sharedNotes = uniqueIntersection(notesA, notesB).length;
+      score += Math.min(sharedNotes * 3, 15);
+
+      // Gender harmony (up to 5)
+      const gA = normalizeGender(a.Gender);
+      const gB = normalizeGender(b.Gender);
+      if (gA && gB) {
+        if (gA === gB && gA !== "u") score += 5;
+        else if (gA === "u" || gB === "u") score += 3;
+      }
+
+      // Rating proximity (up to 5)
+      const rA = parseFloat(a["Rating Value"]);
+      const rB = parseFloat(b["Rating Value"]);
+      if (!isNaN(rA) && !isNaN(rB)) {
+        const diff = Math.abs(rA - rB);
+        if (diff <= 0.2) score += 5;
+        else if (diff <= 0.5) score += 3;
+      }
+
+      // Soft cap
+      return Math.min(100, Math.round(score));
+    }
+
+    function calculateOverallScore(selected) {
+      if (selected.length < 2) return 0;
+      let total = 0;
+      let pairs = 0;
+      for (let i = 0; i < selected.length; i++) {
+        for (let j = i + 1; j < selected.length; j++) {
+          total += compareFragrances(selected[i], selected[j]);
+          pairs++;
+        }
+      }
+      if (!pairs) return 0;
+      return Math.round(total / pairs);
+    }
+
+    function scoreMessage(score) {
+      if (score >= 85)
+        return "Ultra-smooth synergy. Expect a polished, signature-worthy aura with strong accord alignment.";
+      if (score >= 70)
+        return "High compatibility. Notes and accords play nicely; great combo for confident layering.";
+      if (score >= 55)
+        return "Decent potential. Some overlap, some contrast. Test on skin and adjust spray counts.";
+      if (score >= 40)
+        return "Risky but creative. Could work in specific ratios if you like bolder, experimental blends.";
+      return "Clashing profile. Very little harmony in accords/notes—patch test only if you enjoy chaos.";
+    }
+
+    // === Analyze handler ===
+    function onAnalyze() {
+      const chosen = [];
+      const used = new Set();
+
+      for (const input of fragInputs) {
+        const f = findFragranceByLabel(input.value);
+        if (f) {
+          const label = formatLabel(f);
+          if (!used.has(label)) {
+            used.add(label);
+            chosen.push(f);
+          }
+        }
+      }
+
+      if (chosen.length < 2) {
+        resultEl.classList.remove("hidden");
+        scoreValueEl.textContent = "0 / 100";
+        scoreBarEl.style.width = "0%";
+        scoreTextEl.innerHTML =
+          "Select at least <strong>two</strong> valid fragrances from the suggestions to analyze.";
+        return;
+      }
+
+      const score = calculateOverallScore(chosen);
+      resultEl.classList.remove("hidden");
+      scoreValueEl.textContent = `${score} / 100`;
+      scoreBarEl.style.width = `${score}%`;
+      scoreTextEl.innerHTML = scoreMessage(score);
+    }
+
+    // === Add fragrance handler (local only) ===
+    function onAddFragrance() {
+      const name = document.getElementById("addName").value.trim();
+      const brand = document.getElementById("addBrand").value.trim();
+      const gender = document.getElementById("addGender").value.trim();
+      const top = document.getElementById("addTop").value.trim();
+      const mid = document.getElementById("addMiddle").value.trim();
+      const base = document.getElementById("addBase").value.trim();
+      const accordsRaw = document.getElementById("addAccords").value.trim();
+
+      if (!name) {
+        addStatusEl.textContent = "Please add at least a fragrance name.";
+        addStatusEl.className = "status err";
+        return;
+      }
+
+      const accords = accordsRaw
+        ? accordsRaw.split(",").map(a => a.trim()).filter(a => a)
+        : [];
+
+      const newFrag = {
+        url: "",
+        Perfume: name,
+        Brand: brand,
+        Country: "",
+        Gender: gender,
+        "Rating Value": "",
+        "Rating Count": "",
+        Year: "",
+        Top: top,
+        Middle: mid,
+        Base: base,
+        Perfumer1: "",
+        Perfumer2: "",
+        mainaccord1: accords[0] || "",
+        mainaccord2: accords[1] || "",
+        mainaccord3: accords[2] || "",
+        mainaccord4: accords[3] || "",
+        mainaccord5: accords[4] || ""
+      };
+
+      // If same label exists, replace; else push
+      const label = formatLabel(newFrag).toLowerCase();
+      let replaced = false;
+      for (let i = 0; i < fragrances.length; i++) {
+        if (formatLabel(fragrances[i]).toLowerCase() === label) {
+          fragrances[i] = newFrag;
+          replaced = true;
+          break;
+        }
+      }
+      if (!replaced) fragrances.push(newFrag);
+
+      rebuildDatalist();
+
+      addStatusEl.textContent = replaced
+        ? "Fragrance updated in suggestions for this session."
+        : "Fragrance added to suggestions for this session.";
+      addStatusEl.className = "status ok";
+
+      // Optionally clear some fields (keep brand/name so they see success)
+      document.getElementById("addGender").value = "";
+      document.getElementById("addTop").value = "";
+      document.getElementById("addMiddle").value = "";
+      document.getElementById("addBase").value = "";
+      document.getElementById("addAccords").value = "";
+    }
+  </script>
+</body>
+</html>
