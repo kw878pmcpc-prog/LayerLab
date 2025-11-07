@@ -291,7 +291,6 @@
       font-weight: 600;
     }
 
-    /* Add fragrance card */
     .card.small {
       padding: 14px 14px 12px;
     }
@@ -349,10 +348,38 @@
     }
 
     footer {
-      margin-top: 14px;
-      font-size: 0.65rem;
+      margin-top: 18px;
+      text-align: center;
+      font-size: 0.7rem;
       color: var(--muted);
-      text-align: right;
+    }
+
+    .footer-brand {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 4px 14px;
+      border-radius: var(--radius-full);
+      border: 1px solid rgba(183,108,255,0.36);
+      background: radial-gradient(circle at top, rgba(183,108,255,0.12), transparent);
+      color: var(--accent);
+      text-shadow: 0 0 6px rgba(183,108,255,0.7);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 600;
+      animation: floatGlow 3s ease-in-out infinite;
+    }
+
+    @keyframes floatGlow {
+      0%, 100% {
+        transform: translateY(0);
+        box-shadow: 0 0 8px rgba(183,108,255,0.25);
+        opacity: 0.92;
+      }
+      50% {
+        transform: translateY(-2px);
+        box-shadow: 0 0 18px rgba(183,108,255,0.55);
+        opacity: 1;
+      }
     }
 
     @media (max-width: 780px) {
@@ -427,7 +454,7 @@
         <div class="card-header">
           <h2>Add a Missing Fragrance</h2>
         </div>
-        <p class="hint">Not in the list? Add it here and it becomes instantly available in LayerLab (local only).</p>
+        <p class="hint">Not in the list? Add it here and it becomes instantly available in LayerLab (for this session).</p>
 
         <div class="add-grid">
           <div>
@@ -468,7 +495,8 @@
     </div>
 
     <footer>
-      Built for fragrance nerds. Data stays client-side.
+      <div>Data stays in your browser. Only your chaos layering knows what you’re really doing. 🕶️</div>
+      <div class="footer-brand">Made with 💜 &amp; aldehydes by PerfumePeter</div>
     </footer>
   </div>
 
@@ -476,8 +504,7 @@
   <datalist id="fragList"></datalist>
 
   <script>
-    // === Data storage ===
-    let fragrances = []; // objects shaped from CSV + user-added
+    let fragrances = [];
 
     const fragInputs = [
       document.getElementById("f1"),
@@ -492,14 +519,12 @@
     const scoreTextEl = document.getElementById("scoreText");
     const addStatusEl = document.getElementById("addStatus");
 
-    // === Init ===
     window.addEventListener("DOMContentLoaded", () => {
       loadCSV();
       document.getElementById("analyzeBtn").addEventListener("click", onAnalyze);
       document.getElementById("addBtn").addEventListener("click", onAddFragrance);
     });
 
-    // === Load CSV from repo root ===
     async function loadCSV() {
       try {
         const res = await fetch("fragrances.csv", { cache: "no-store" });
@@ -512,7 +537,7 @@
         const headers = lines[0].split(";").map(h => h.trim());
         for (let i = 1; i < lines.length; i++) {
           const row = lines[i].split(";");
-          if (!row.length || !row[1]) continue; // skip if no Perfume
+          if (!row.length || !row[1]) continue;
           const obj = {};
           headers.forEach((h, idx) => {
             obj[h] = (row[idx] || "").trim();
@@ -529,7 +554,6 @@
       }
     }
 
-    // === Helpers ===
     function formatLabel(f) {
       const name = (f.Perfume || "").trim();
       const brand = (f.Brand || "").trim();
@@ -589,18 +613,15 @@
       return "u";
     }
 
-    // === Scoring between 2 frags ===
     function compareFragrances(a, b) {
       if (!a || !b) return 0;
       let score = 0;
 
-      // Main accords (up to 75)
       const accA = parseAccords(a);
       const accB = parseAccords(b);
       const sharedAcc = uniqueIntersection(accA, accB).length;
       score += Math.min(sharedAcc * 15, 75);
 
-      // Notes overlap (up to 15)
       const notesA = [
         ...parseNotes(a.Top),
         ...parseNotes(a.Middle),
@@ -614,7 +635,6 @@
       const sharedNotes = uniqueIntersection(notesA, notesB).length;
       score += Math.min(sharedNotes * 3, 15);
 
-      // Gender harmony (up to 5)
       const gA = normalizeGender(a.Gender);
       const gB = normalizeGender(b.Gender);
       if (gA && gB) {
@@ -622,7 +642,6 @@
         else if (gA === "u" || gB === "u") score += 3;
       }
 
-      // Rating proximity (up to 5)
       const rA = parseFloat(a["Rating Value"]);
       const rB = parseFloat(b["Rating Value"]);
       if (!isNaN(rA) && !isNaN(rB)) {
@@ -631,7 +650,6 @@
         else if (diff <= 0.5) score += 3;
       }
 
-      // Soft cap
       return Math.min(100, Math.round(score));
     }
 
@@ -650,18 +668,23 @@
     }
 
     function scoreMessage(score) {
-      if (score >= 85)
-        return "Ultra-smooth synergy. Expect a polished, signature-worthy aura with strong accord alignment.";
+      if (score >= 90)
+        return "Nuclear-level harmony. <strong>Your skin just unlocked DLC: Signature Scent Edition.</strong> People will ask. Random dogs will respect you.";
+      if (score >= 80)
+        return "Elite combo. <strong>Projecting 'I know exactly what I'm doing'.</strong> Date nights, events, flex — all green.";
       if (score >= 70)
-        return "High compatibility. Notes and accords play nicely; great combo for confident layering.";
-      if (score >= 55)
-        return "Decent potential. Some overlap, some contrast. Test on skin and adjust spray counts.";
+        return "Very solid blend. <strong>Balanced, smooth, and addictive.</strong> You smell like you read note pyramids for fun.";
+      if (score >= 60)
+        return "Good potential. <strong>Wearable with personality.</strong> Tweak sprays and placement and you’re golden.";
+      if (score >= 50)
+        return "Mid but interesting. <strong>Could be artsy niche-core.</strong> Try it on skin before public deployment.";
       if (score >= 40)
-        return "Risky but creative. Could work in specific ratios if you like bolder, experimental blends.";
-      return "Clashing profile. Very little harmony in accords/notes—patch test only if you enjoy chaos.";
+        return "Chaotic neutral. <strong>May or may not summon compliments.</strong> Proceed if you enjoy experiments and questionable decisions.";
+      if (score >= 25)
+        return "Spicy gamble. <strong>Smells like a blind-buy haul in progress.</strong> Test at home, keep an escape plan.";
+      return "Full goblin mode. <strong>Zero harmony, maximum drama.</strong> Only for content creators, chemists, and the deeply unbothered.";
     }
 
-    // === Analyze handler ===
     function onAnalyze() {
       const chosen = [];
       const used = new Set();
@@ -682,7 +705,7 @@
         scoreValueEl.textContent = "0 / 100";
         scoreBarEl.style.width = "0%";
         scoreTextEl.innerHTML =
-          "Select at least <strong>two</strong> valid fragrances from the suggestions to analyze.";
+          "Select at least <strong>two</strong> valid fragrances from the suggestions to analyze. No layering crimes with just one bottle. Yet.";
         return;
       }
 
@@ -693,7 +716,6 @@
       scoreTextEl.innerHTML = scoreMessage(score);
     }
 
-    // === Add fragrance handler (local only) ===
     function onAddFragrance() {
       const name = document.getElementById("addName").value.trim();
       const brand = document.getElementById("addBrand").value.trim();
@@ -734,11 +756,11 @@
         mainaccord5: accords[4] || ""
       };
 
-      // If same label exists, replace; else push
-      const label = formatLabel(newFrag).toLowerCase();
+      const label = (brand ? `${name} (${brand})` : name).toLowerCase();
       let replaced = false;
       for (let i = 0; i < fragrances.length; i++) {
-        if (formatLabel(fragrances[i]).toLowerCase() === label) {
+        const existingLabel = (formatLabel(fragrances[i]) || "").toLowerCase();
+        if (existingLabel === label) {
           fragrances[i] = newFrag;
           replaced = true;
           break;
@@ -749,11 +771,10 @@
       rebuildDatalist();
 
       addStatusEl.textContent = replaced
-        ? "Fragrance updated in suggestions for this session."
-        : "Fragrance added to suggestions for this session.";
+        ? "Fragrance updated in suggestions for this session. Layer away."
+        : "Fragrance added to suggestions for this session. You mad scientist.";
       addStatusEl.className = "status ok";
 
-      // Optionally clear some fields (keep brand/name so they see success)
       document.getElementById("addGender").value = "";
       document.getElementById("addTop").value = "";
       document.getElementById("addMiddle").value = "";
@@ -761,14 +782,5 @@
       document.getElementById("addAccords").value = "";
     }
   </script>
-  <footer style="margin-top:30px;text-align:center;font-size:0.85rem;">
-  <span style="
-    color:#b76cff;
-    text-shadow:0 0 8px rgba(183,108,255,0.7);
-    letter-spacing:0.03em;
-  ">
-    ✨ Made with passion by PerfumePeter ✨
-  </span>
-</footer>
 </body>
 </html>
