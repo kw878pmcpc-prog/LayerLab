@@ -1,0 +1,251 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 <!DOCTYPE html>\
+<html lang="en">\
+<head>\
+  <meta charset="UTF-8" />\
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />\
+  <title>LayerLab \'96 Fragrance Layering Analyzer</title>\
+\
+  <!-- Google Fonts -->\
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">\
+\
+  <!-- PapaParse for CSV -->\
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>\
+\
+  <style>\
+    :root \{\
+      --bg-color: #0e0e10;\
+      --card-bg: #1a1a1d;\
+      --text-color: #e0e0e0;\
+      --accent: #b76cff;\
+      --accent-light: #d5a8ff;\
+    \}\
+    body \{\
+      background-color: var(--bg-color);\
+      font-family: 'Poppins', sans-serif;\
+      color: var(--text-color);\
+      display: flex;\
+      flex-direction: column;\
+      align-items: center;\
+      min-height: 100vh;\
+      margin: 0;\
+      padding: 2rem;\
+    \}\
+    h1 \{\
+      color: var(--accent-light);\
+      font-size: 2.2rem;\
+      margin-bottom: 1.5rem;\
+    \}\
+    .card \{\
+      background: var(--card-bg);\
+      padding: 2rem;\
+      border-radius: 1rem;\
+      box-shadow: 0 0 15px rgba(183, 108, 255, 0.2);\
+      max-width: 600px;\
+      width: 100%;\
+    \}\
+    select, input, button \{\
+      width: 100%;\
+      padding: 0.6rem;\
+      border-radius: 0.5rem;\
+      border: none;\
+      margin: 0.5rem 0;\
+      background-color: #222;\
+      color: var(--text-color);\
+      font-size: 1rem;\
+    \}\
+    select:focus, input:focus \{\
+      outline: 2px solid var(--accent);\
+    \}\
+    button \{\
+      background: var(--accent);\
+      color: #fff;\
+      cursor: pointer;\
+      font-weight: bold;\
+      transition: 0.2s;\
+    \}\
+    button:hover \{\
+      background: var(--accent-light);\
+    \}\
+    #result \{\
+      margin-top: 1.5rem;\
+      text-align: center;\
+    \}\
+    .score \{\
+      font-size: 2.5rem;\
+      color: var(--accent-light);\
+      font-weight: bold;\
+    \}\
+    .add-btn \{\
+      background: none;\
+      color: var(--accent);\
+      border: 1px solid var(--accent);\
+      margin-top: 1rem;\
+    \}\
+    .hidden \{\
+      display: none;\
+    \}\
+    .modal \{\
+      position: fixed;\
+      top: 0; left: 0; width: 100%; height: 100%;\
+      background: rgba(0, 0, 0, 0.7);\
+      display: flex;\
+      align-items: center;\
+      justify-content: center;\
+    \}\
+    .modal-content \{\
+      background: var(--card-bg);\
+      padding: 2rem;\
+      border-radius: 1rem;\
+      width: 90%;\
+      max-width: 400px;\
+    \}\
+  </style>\
+</head>\
+<body>\
+  <h1>\uc0\u55357 \u56476  LayerLab</h1>\
+  <div class="card">\
+    <label>Select up to 4 fragrances:</label>\
+    <select id="frag1"><option value="">Select Fragrance 1</option></select>\
+    <select id="frag2"><option value="">Select Fragrance 2</option></select>\
+    <select id="frag3"><option value="">(Optional) Fragrance 3</option></select>\
+    <select id="frag4"><option value="">(Optional) Fragrance 4</option></select>\
+\
+    <button id="calcBtn">Calculate Combo Score</button>\
+    <button class="add-btn" id="addBtn">+ Add a Missing Fragrance</button>\
+\
+    <div id="result"></div>\
+  </div>\
+\
+  <!-- Add Fragrance Modal -->\
+  <div id="addModal" class="modal hidden">\
+    <div class="modal-content">\
+      <h3>Add a New Fragrance</h3>\
+      <input id="newName" placeholder="Perfume Name" />\
+      <input id="newBrand" placeholder="Brand" />\
+      <input id="newGender" placeholder="Gender" />\
+      <input id="newTop" placeholder="Top Notes (comma-separated)" />\
+      <input id="newMiddle" placeholder="Middle Notes (comma-separated)" />\
+      <input id="newBase" placeholder="Base Notes (comma-separated)" />\
+      <input id="newAccords" placeholder="Main Accords (comma-separated)" />\
+      <button id="saveFrag">Save</button>\
+      <button id="closeModal">Cancel</button>\
+    </div>\
+  </div>\
+\
+  <script>\
+    let fragrances = [];\
+    const selects = [frag1, frag2, frag3, frag4];\
+    const resultDiv = document.getElementById("result");\
+\
+    // Load CSV\
+    Papa.parse("fragrances.csv", \{\
+      download: true,\
+      header: true,\
+      delimiter: ";",\
+      complete: (res) => \{\
+        fragrances = res.data.filter(f => f.Perfume);\
+        populateDropdowns();\
+      \}\
+    \});\
+\
+    function populateDropdowns() \{\
+      selects.forEach(sel => \{\
+        fragrances.forEach(f => \{\
+          const opt = document.createElement("option");\
+          opt.value = f.Perfume;\
+          opt.textContent = `$\{f.Perfume\} ($\{f.Brand\})`;\
+          sel.appendChild(opt);\
+        \});\
+      \});\
+    \}\
+\
+    function getSelectedFragrances() \{\
+      return selects.map(sel => fragrances.find(f => f.Perfume === sel.value)).filter(f => f);\
+    \}\
+\
+    function calculateScore(selected) \{\
+      if (selected.length < 2) return 0;\
+      let score = 0;\
+      let totalPairs = 0;\
+\
+      for (let i = 0; i < selected.length; i++) \{\
+        for (let j = i + 1; j < selected.length; j++) \{\
+          totalPairs++;\
+          score += compareFragrances(selected[i], selected[j]);\
+        \}\
+      \}\
+\
+      return Math.round(score / totalPairs);\
+    \}\
+\
+    function compareFragrances(a, b) \{\
+      if (!a || !b) return 0;\
+      let s = 0;\
+\
+      // Shared accords\
+      const accordsA = [a.mainaccord1, a.mainaccord2, a.mainaccord3, a.mainaccord4, a.mainaccord5].filter(Boolean);\
+      const accordsB = [b.mainaccord1, b.mainaccord2, b.mainaccord3, b.mainaccord4, b.mainaccord5].filter(Boolean);\
+      const sharedAccords = accordsA.filter(ac => accordsB.includes(ac)).length;\
+      s += sharedAccords * 15;\
+\
+      // Shared notes\
+      const notesA = (a.Top + "," + a.Middle + "," + a.Base).split(",").map(n => n.trim().toLowerCase());\
+      const notesB = (b.Top + "," + b.Middle + "," + b.Base).split(",").map(n => n.trim().toLowerCase());\
+      const sharedNotes = notesA.filter(n => n && notesB.includes(n)).length;\
+      s += Math.min(sharedNotes * 5, 20);\
+\
+      // Gender match\
+      if (a.Gender && a.Gender === b.Gender) s += 5;\
+\
+      return Math.min(s, 100);\
+    \}\
+\
+    calcBtn.onclick = () => \{\
+      const selected = getSelectedFragrances();\
+      if (selected.length < 2) \{\
+        resultDiv.innerHTML = "<p>Please select at least 2 fragrances.</p>";\
+        return;\
+      \}\
+      const score = calculateScore(selected);\
+      resultDiv.innerHTML = `<p class="score">$\{score\}/100</p><p>$\{score >= 70 ? "\uc0\u55357 \u56613  Excellent layering potential!" : score >= 40 ? "\u55357 \u56481  Might work with balance." : "\u9888 \u65039  Not a great match."\}</p>`;\
+    \};\
+\
+    // Modal for adding new fragrance\
+    const modal = document.getElementById("addModal");\
+    addBtn.onclick = () => modal.classList.remove("hidden");\
+    closeModal.onclick = () => modal.classList.add("hidden");\
+\
+    saveFrag.onclick = () => \{\
+      const newF = \{\
+        Perfume: newName.value,\
+        Brand: newBrand.value,\
+        Gender: newGender.value,\
+        Top: newTop.value,\
+        Middle: newMiddle.value,\
+        Base: newBase.value,\
+        mainaccord1: newAccords.value.split(",")[0]?.trim(),\
+        mainaccord2: newAccords.value.split(",")[1]?.trim(),\
+        mainaccord3: newAccords.value.split(",")[2]?.trim(),\
+        mainaccord4: newAccords.value.split(",")[3]?.trim(),\
+        mainaccord5: newAccords.value.split(",")[4]?.trim()\
+      \};\
+      fragrances.push(newF);\
+      selects.forEach(sel => \{\
+        const opt = document.createElement("option");\
+        opt.value = newF.Perfume;\
+        opt.textContent = `$\{newF.Perfume\} ($\{newF.Brand\})`;\
+        sel.appendChild(opt);\
+      \});\
+      modal.classList.add("hidden");\
+    \};\
+  </script>\
+</body>\
+</html>\
+}
